@@ -15,6 +15,11 @@
             "JoshDaugherty\\HomeDashboard\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "JoshDaugherty\\HomeDashboard\\Tests\\": "tests/"
+        }
+    },
     "extra": {
         "laravel": {
             "providers": [
@@ -23,5 +28,8 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "require-dev": {
+        "orchestra/testbench": "^11.0"
+    }
 }
