@@ -20,7 +20,7 @@ class HomeDashboardServiceProvider extends ServiceProvider
     {
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'home-dashboard');
 
-        if (config('home-dashboard.route.enabled')) {
+        if (config('home-dashboard.route.enabled', true)) {
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         }
 
