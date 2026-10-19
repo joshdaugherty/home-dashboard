@@ -26,6 +26,24 @@ class ShellTest extends TestCase
     {
         $this->get('/')
             ->assertSee('class="dark h-full"', false)
-            ->assertSee('h-dvh', false);
+            ->assertSee('h-dvh', false)
+            ->assertSee('rel="manifest"', false);
+    }
+
+    public function test_manifest_requests_fullscreen_landscape(): void
+    {
+        $response = $this->get('/manifest.webmanifest')->assertOk();
+
+        $this->assertStringContainsString(
+            'application/manifest+json',
+            (string) $response->headers->get('content-type'),
+        );
+
+        $manifest = json_decode($response->getContent(), true);
+
+        $this->assertSame('fullscreen', $manifest['display']);
+        $this->assertSame('landscape', $manifest['orientation']);
+        $this->assertSame('/', $manifest['start_url']);
+        $this->assertSame('/', $manifest['scope']);
     }
 }

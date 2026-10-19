@@ -6,6 +6,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="theme-color" content="#09090b">
+        <link rel="manifest" href="{{ route('home-dashboard.manifest') }}">
         <title>{{ config('home-dashboard.title') }}</title>
 
         @vite(config('home-dashboard.vite'))
