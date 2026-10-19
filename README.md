@@ -10,6 +10,7 @@ Requires PHP 8.3+, Laravel 13, Livewire 4.1+ and Flux 2.13+ (free components onl
 | --- | --- |
 | Today | Clock, weather (Open-Meteo) and the next events from your calendars |
 | Calendar | Month grid plus a per-day agenda from read-only iCal feeds |
+| Settings | Edit calendars and location at /dashboard-settings |
 | Chores, Shopping, Photos, Home | Placeholders |
 
 ## Install into a Laravel app
@@ -57,6 +58,14 @@ DASHBOARD_CALENDARS='[{"name":"Family","color":"sky","url":"https://..."}]'
 
 Recurring, all-day and multi-day events are expanded with [sabre/vobject](https://github.com/sabre-io/vobject) and bucketed by day in `DASHBOARD_TIMEZONE`, so the device's own time zone never matters.
 
+## Settings page
+
+You can manage calendars and location without touching environment variables: open `/dashboard-settings` (also linked from the Home tab) while signed in. Add, remove, reorder and recolor calendar feeds, test a feed, search for your place (Open-Meteo geocoding, no key), and set the time zone and units.
+
+- Saved values live in the `home_dashboard_settings` table, encrypted with `APP_KEY` (rotating the key means re-entering them). Run `php artisan migrate`; the package loads its own migration.
+- A saved value wins over the matching environment variable, and with nothing saved the env vars apply, so an env-only setup keeps working. "Use environment defaults" clears everything saved.
+- Feed URLs are write-only: they are never sent back to the browser, so a saved address shows as "Saved" and can only be replaced.
+- Any signed-in user can open the page. The package leaves access control to the host app; add your own middleware through `home-dashboard.route.middleware` if you want to restrict it.
 ## Auto-reload after a deploy
 
 A kiosk never refreshes on its own, so the shell asks an authenticated `/version` endpoint every 120 s and reloads itself, only while nobody is touching the screen, when the answer changes. The version is derived from the built asset manifest, `composer.lock` and the modified time of `bootstrap/app.php`. Set `DASHBOARD_VERSION` to any string to control it yourself, and `DASHBOARD_VERSION_CHECK` to change the interval in seconds (`0` disables the check).

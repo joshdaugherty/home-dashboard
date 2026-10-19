@@ -3,12 +3,15 @@
 namespace JoshDaugherty\HomeDashboard\Tests;
 
 use Flux\FluxServiceProvider;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use JoshDaugherty\HomeDashboard\HomeDashboardServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra
 {
+    use RefreshDatabase;
+
     protected function getPackageProviders($app): array
     {
         return [

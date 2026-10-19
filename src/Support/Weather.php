@@ -15,10 +15,15 @@ use Throwable;
  */
 class Weather
 {
+    private function settings(): Settings
+    {
+        return app(Settings::class);
+    }
+
     public function configured(): bool
     {
-        return is_numeric(config('home-dashboard.location.latitude'))
-            && is_numeric(config('home-dashboard.location.longitude'));
+        return is_numeric($this->settings()->get('latitude'))
+            && is_numeric($this->settings()->get('longitude'));
     }
 
     /**
@@ -31,9 +36,9 @@ class Weather
         }
 
         $key = 'home-dashboard:weather:'.md5(json_encode([
-            config('home-dashboard.location'),
-            config('home-dashboard.units'),
-            config('home-dashboard.timezone'),
+            [$this->settings()->get('latitude'), $this->settings()->get('longitude')],
+            $this->settings()->get('units'),
+            $this->settings()->get('timezone'),
         ]));
 
         if ($cached = Cache::get($key)) {
@@ -65,12 +70,12 @@ class Weather
      */
     private function fetch(): array
     {
-        $metric = config('home-dashboard.units') === 'metric';
+        $metric = $this->settings()->get('units') === 'metric';
 
         $json = Http::timeout(8)->retry(1, 200)->get('https://api.open-meteo.com/v1/forecast', [
-            'latitude' => config('home-dashboard.location.latitude'),
-            'longitude' => config('home-dashboard.location.longitude'),
-            'timezone' => config('home-dashboard.timezone'),
+            'latitude' => $this->settings()->get('latitude'),
+            'longitude' => $this->settings()->get('longitude'),
+            'timezone' => $this->settings()->get('timezone'),
             'current' => 'temperature_2m,apparent_temperature,weather_code,is_day',
             'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
             'forecast_days' => 5,

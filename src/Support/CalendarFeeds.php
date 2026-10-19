@@ -20,17 +20,38 @@ use Throwable;
  */
 class CalendarFeeds
 {
-    private const PALETTE = [
+    public const PALETTE = [
         'sky' => '#38bdf8', 'amber' => '#fbbf24', 'rose' => '#fb7185', 'emerald' => '#34d399',
         'violet' => '#a78bfa', 'orange' => '#fb923c', 'teal' => '#2dd4bf', 'pink' => '#f472b6',
     ];
+
+    private function settings(): Settings
+    {
+        return app(Settings::class);
+    }
+
+    public static function normalizeUrl(string $url): string
+    {
+        return preg_replace('#^webcal://#i', 'https://', trim($url));
+    }
+
+    /**
+     * Fetch and parse one feed, returning how many events fall in the window.
+     * Throws on any failure; callers must not echo the message (it can embed the URL).
+     */
+    public function probe(string $url): int
+    {
+        [$start, $end] = $this->window();
+
+        return count($this->fetch(['id' => 'probe', 'name' => 'probe', 'color' => '#ffffff', 'url' => self::normalizeUrl($url)], $start, $end));
+    }
 
     /** @var array<string, mixed> per-instance memo */
     private array $memo = [];
 
     public function timezone(): string
     {
-        return (string) config('home-dashboard.timezone', 'UTC');
+        return (string) ($this->settings()->get('timezone') ?: 'UTC');
     }
 
     public function now(): CarbonImmutable
@@ -41,11 +62,11 @@ class CalendarFeeds
     /**
      * Parse the `calendars` config (array or JSON string).
      *
-     * @return array{feeds: list<array{name: string, color: string, url: string}>, error: string|null}
+     * @return array{feeds: list<array{id: string, name: string, color: string, url: string}>, error: string|null}
      */
     public function feeds(): array
     {
-        $raw = config('home-dashboard.calendars');
+        $raw = $this->settings()->get('calendars');
 
         if (is_string($raw)) {
             $raw = trim($raw);
@@ -75,9 +96,10 @@ class CalendarFeeds
             }
             $color = (string) ($item['color'] ?? '');
             $feeds[] = [
+                'id' => is_array($item) && isset($item['id']) ? (string) $item['id'] : 'f'.$i,
                 'name' => (string) ($item['name'] ?? 'Calendar '.($i + 1)),
                 'color' => self::PALETTE[$color] ?? (preg_match('/^#[0-9a-f]{3,8}$/i', $color) ? $color : $colors[$i % count($colors)]),
-                'url' => preg_replace('#^webcal://#i', 'https://', $url),
+                'url' => self::normalizeUrl($url),
             ];
         }
 
@@ -229,7 +251,7 @@ class CalendarFeeds
     }
 
     /**
-     * @param  array{name: string, color: string, url: string}  $feed
+     * @param  array{id?: string, name: string, color: string, url: string}  $feed
      * @return list<array<string, mixed>>
      */
     private function fetch(array $feed, CarbonImmutable $start, CarbonImmutable $end): array
