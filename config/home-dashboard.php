@@ -78,6 +78,8 @@ return [
         'weather' => 600,  // seconds
         'calendar' => 600,
     ],
+    // Where the Home tab's Settings link goes. Point it at your own route if you embed the form in the host app's settings.
+    'settings_route' => 'home-dashboard.settings',
     'refresh' => (int) env('DASHBOARD_REFRESH', 300), // seconds between background re-renders
 
     /*

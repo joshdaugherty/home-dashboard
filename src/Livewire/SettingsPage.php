@@ -43,8 +43,12 @@ class SettingsPage extends Component
 
     public ?string $status = null;
 
-    public function mount(): void
+    /** True when rendered inside a host page (no kiosk chrome, no heading or back link). */
+    public bool $embedded = false;
+
+    public function mount(bool $embedded = false): void
     {
+        $this->embedded = $embedded;
         $this->load();
     }
 

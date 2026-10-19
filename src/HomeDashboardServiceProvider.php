@@ -31,6 +31,8 @@ class HomeDashboardServiceProvider extends ServiceProvider
 
         Livewire::component('home-dashboard.shell', Shell::class);
         Livewire::component('home-dashboard.settings', SettingsPage::class);
+        // The same form, for hosts to embed in their own settings area: <livewire:home-dashboard.settings-form :embedded="true" />
+        Livewire::component('home-dashboard.settings-form', SettingsPage::class);
         Livewire::component('home-dashboard.tabs.today', Tabs\Today::class);
         Livewire::component('home-dashboard.tabs.calendar', Tabs\Calendar::class);
         Livewire::component('home-dashboard.tabs.chores', Tabs\Chores::class);

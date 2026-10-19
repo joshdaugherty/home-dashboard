@@ -1,13 +1,15 @@
 {{-- Settings: plain scrolling page inside the kiosk layout (the layout itself never scrolls). --}}
-<div class="h-full select-text overflow-y-auto p-[clamp(0.75rem,2vmin,2rem)]">
-    <div class="mx-auto max-w-3xl space-y-8 pb-16">
+<div @class(['h-full select-text overflow-y-auto p-[clamp(0.75rem,2vmin,2rem)]' => ! $embedded, 'select-text' => $embedded])>
+    <div @class(['mx-auto max-w-3xl space-y-8 pb-16' => ! $embedded, 'space-y-8' => $embedded])>
+        @unless ($embedded)
         <div class="flex items-center justify-between gap-4">
             <flux:heading size="xl">Settings</flux:heading>
             <flux:button href="{{ $back }}" class="min-h-12">Back to dashboard</flux:button>
         </div>
+        @endunless
 
         @if ($status)
-            <div class="rounded-xl border border-emerald-800 bg-emerald-950 px-4 py-3 text-emerald-300" role="status">{{ $status }}</div>
+            <div class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" role="status">{{ $status }}</div>
         @endif
 
         <form wire:submit="save" class="space-y-10">
@@ -19,7 +21,7 @@
                 </div>
 
                 @forelse ($feeds as $i => $feed)
-                    <div class="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4" wire:key="feed-{{ $feed['id'] }}">
+                    <div class="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 p-4" wire:key="feed-{{ $feed['id'] }}">
                         <div class="flex flex-wrap gap-3">
                             <div class="min-w-48 flex-1">
                                 <flux:input wire:model="feeds.{{ $i }}.name" label="Name" placeholder="Family" />
@@ -32,7 +34,7 @@
                                         <button
                                             type="button"
                                             wire:click="$set('feeds.{{ $i }}.color', '{{ $name }}')"
-                                            class="size-12 rounded-full border-2 {{ $feed['color'] === $name ? 'border-white' : 'border-transparent' }}"
+                                            class="size-12 rounded-full border-2 {{ $feed['color'] === $name ? 'border-zinc-900 dark:border-white' : 'border-transparent' }}"
                                             style="background-color: {{ $hex }}"
                                             aria-label="{{ ucfirst($name) }}"
                                             aria-pressed="{{ $feed['color'] === $name ? 'true' : 'false' }}"
@@ -88,7 +90,7 @@
                 @if ($places)
                     <div class="space-y-2">
                         @foreach ($places as $p => $place)
-                            <button type="button" wire:click="pickPlace({{ $p }})" class="block min-h-12 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-left active:bg-zinc-800">
+                            <button type="button" wire:click="pickPlace({{ $p }})" class="block min-h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3 text-left active:bg-zinc-200 dark:active:bg-zinc-800">
                                 {{ $place['label'] }}
                                 <span class="text-sm text-zinc-500">· {{ $place['tz'] }}</span>
                             </button>

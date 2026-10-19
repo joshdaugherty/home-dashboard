@@ -29,6 +29,31 @@ class SettingsPageTest extends TestCase
         $this->get('/dashboard-settings')->assertOk()->assertSee('Calendars')->assertSee('Location and weather');
     }
 
+    public function test_full_page_has_a_heading_and_back_link_but_the_embedded_form_does_not(): void
+    {
+        $this->get('/dashboard-settings')->assertSee('Back to dashboard');
+
+        Livewire::test(SettingsPage::class, ['embedded' => true])
+            ->assertSee('Calendars')
+            ->assertDontSee('Back to dashboard')
+            ->assertDontSee('overflow-y-auto');
+    }
+
+    public function test_the_form_can_be_embedded_by_alias_in_a_host_page(): void
+    {
+        Livewire::test('home-dashboard.settings-form', ['embedded' => true])
+            ->assertSee('Location and weather')
+            ->call('addFeed')
+            ->assertSet('feeds.0.name', '');
+    }
+
+    public function test_home_tab_settings_link_follows_the_configured_route(): void
+    {
+        config(['home-dashboard.settings_route' => 'home-dashboard.settings']);
+
+        Livewire::test(\JoshDaugherty\HomeDashboard\Livewire\Tabs\Home::class)->assertSee('/dashboard-settings', false);
+    }
+
     public function test_adding_a_calendar_saves_it_encrypted_and_selects_the_color(): void
     {
         Livewire::test(SettingsPage::class)
