@@ -54,12 +54,12 @@
         @if (count($people) + ($hasShared ? 1 : 0) > 1)
         <div class="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
             <div class="flex flex-wrap gap-1" role="group" aria-label="Whose">
-                <button type="button" @click="who = 'all'" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === 'all'">Everyone</button>
+                <button type="button" @click="who = 'all'" class="min-h-12 rounded-xl border border-white px-4 text-[0.9rem]" :class="who === 'all' ? 'bg-white text-zinc-950' : 'text-white active:bg-zinc-700'" :style="who === 'all' ? '' : 'background: rgba(24, 24, 27, 0.6);'" :aria-pressed="who === 'all'">Everyone</button>
                 @if ($hasShared)
-                <button type="button" @click="who = 'shared'" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === 'shared' ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === 'shared'">Shared</button>
+                <button type="button" @click="who = 'shared'" class="min-h-12 rounded-xl border border-white px-4 text-[0.9rem]" :class="who === 'shared' ? 'bg-white text-zinc-950' : 'text-white active:bg-zinc-700'" :style="who === 'shared' ? '' : 'background: rgba(24, 24, 27, 0.6);'" :aria-pressed="who === 'shared'">Shared</button>
                 @endif
                 <template x-for="p in people" :key="p.id">
-                    <button type="button" @click="who = p.id" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === p.id ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === p.id" x-text="p.name"></button>
+                    <button type="button" @click="who = p.id" class="min-h-12 rounded-xl border border-white px-4 text-[0.9rem]" :class="who === p.id ? 'bg-white text-zinc-950' : 'text-white active:bg-zinc-700'" :style="who === p.id ? '' : 'background: rgba(24, 24, 27, 0.6);'" :aria-pressed="who === p.id" x-text="p.name"></button>
                 </template>
             </div>
         </div>
@@ -68,10 +68,10 @@
             {{-- Month grid --}}
             <section class="flex min-h-0 flex-[3] flex-col" aria-label="Month">
                 <div class="mb-2 flex items-center gap-2">
-                    <button type="button" @click="shift(-1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-2xl active:bg-zinc-800" aria-label="Previous month">‹</button>
+                    <button type="button" @click="shift(-1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-white text-2xl text-white active:bg-zinc-700" style="background: rgba(24, 24, 27, 0.6);" aria-label="Previous month">‹</button>
                     <flux:heading size="lg" class="flex-1 text-center" x-text="title"></flux:heading>
-                    <button type="button" @click="shift(1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-2xl active:bg-zinc-800" aria-label="Next month">›</button>
-                    <button type="button" @click="goToday()" class="min-h-12 rounded-xl px-4 text-[0.9rem] active:bg-zinc-800">Today</button>
+                    <button type="button" @click="shift(1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-white text-2xl text-white active:bg-zinc-700" style="background: rgba(24, 24, 27, 0.6);" aria-label="Next month">›</button>
+                    <button type="button" @click="goToday()" class="min-h-12 rounded-xl border border-white px-4 text-[0.9rem] text-white active:bg-zinc-700" style="background: rgba(24, 24, 27, 0.6);">Today</button>
                 </div>
                 <div class="grid grid-cols-7 text-center text-[0.8rem] text-zinc-500">
                     <template x-for="(d, i) in dow" :key="i"><div x-text="d"></div></template>
@@ -83,7 +83,7 @@
                             @click="selected = c.key"
                             class="flex min-h-0 min-w-0 flex-col items-center justify-start gap-1 rounded-xl border p-1"
                             :class="[
-                                selected === c.key ? 'border-white bg-zinc-800' : 'border-zinc-800 active:bg-zinc-800/60',
+                                selected === c.key ? 'border-white bg-zinc-800' : 'border-zinc-800 bg-zinc-900 active:bg-zinc-800',
                                 c.out ? 'text-zinc-600' : '',
                             ]"
                         >
