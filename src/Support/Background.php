@@ -42,13 +42,18 @@ class Background
         // changes every hour, while NASA's picture is the same all day by nature.
         $date = $now->toDateString();
         $hour = (int) $now->format('G');
-        $key = 'home-dashboard:background:'.$date.'-'.$hour;
+        $key = 'home-dashboard:background:v2:'.$date.'-'.$hour;
 
         if (Cache::has($key.':failed')) {
             return null;
         }
 
         $art = Cache::get($key);
+
+        // An entry saved by an older release may lack fields the view needs: treat it as a miss.
+        if ($art !== null && array_diff(['url', 'title', 'artist', 'credit'], array_keys((array) $art)) !== []) {
+            $art = null;
+        }
 
         if ($art === null) {
             try {
@@ -101,7 +106,7 @@ class Background
     private function apod(string $date): ?array
     {
         // One picture per day, so ask NASA once a day however often the slot changes.
-        $data = Cache::remember('home-dashboard:apod:'.$date, now()->addDay(), fn () => Http::timeout(8)
+        $data = Cache::remember('home-dashboard:apod:v2:'.$date, now()->addDay(), fn () => Http::timeout(8)
             ->get('https://api.nasa.gov/planetary/apod', ['api_key' => $this->nasaKey(), 'date' => $date])
             ->throw()
             ->json());

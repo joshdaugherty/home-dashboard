@@ -70,7 +70,7 @@ class BackgroundTest extends TestCase
         Http::fake(['api.artic.edu/*' => Http::response('nope', 500)]);
         $this->assertNull(app(Background::class)->current(CarbonImmutable::parse('2026-10-20 09:00')));
         $this->assertNull(app(Background::class)->current(CarbonImmutable::parse('2026-10-20 09:00')));
-        $this->assertTrue(Cache::has('home-dashboard:background:2026-10-20-9:failed'));
+        $this->assertTrue(Cache::has('home-dashboard:background:v2:2026-10-20-9:failed'));
     }
 
     public function test_it_can_be_turned_off_without_any_request(): void
@@ -142,4 +142,14 @@ class BackgroundTest extends TestCase
         // NASA's picture is fetched once for the whole day.
         Http::assertSentCount(5);
         Http::assertSent(fn ($request) => str_contains($request->url(), 'api.nasa.gov'));
+    }
+    public function test_a_stale_cache_entry_from_an_older_release_is_replaced(): void
+    {
+        $this->fakeMuseum([$this->work(4, 4000, 2500)]);
+        Cache::put('home-dashboard:background:v2:2026-10-19-9', ['url' => 'x', 'title' => 'Old', 'artist' => 'A', 'link' => 'l'], 3600);
+
+        $art = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00'));
+
+        $this->assertSame('Work 4', $art['title']);
+        $this->assertArrayHasKey('credit', $art);
     }}

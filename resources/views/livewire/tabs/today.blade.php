@@ -73,7 +73,7 @@
 
     @if ($background)
         <div class="text-[0.75rem] text-zinc-400">
-            <span class="italic">{{ $background['title'] }}</span>, {{ $background['artist'] }} · {{ $background['credit'] }}
+            <span class="italic">{{ $background['title'] }}</span>, {{ $background['artist'] }} · {{ $background['credit'] ?? '' }}
         </div>
     @endif
 </div>
