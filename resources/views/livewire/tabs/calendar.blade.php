@@ -107,9 +107,9 @@
             </section>
 
             {{-- Agenda for the selected day --}}
-            <section class="flex min-h-0 flex-[2] flex-col overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900" aria-label="Agenda">
+            <section class="hd-card flex min-h-0 flex-[2] flex-col rounded-2xl border border-zinc-800 bg-zinc-900" aria-label="Agenda">
                 <div class="hd-card-head"><flux:heading x-text="selectedTitle"></flux:heading></div>
-                <div class="px-4 pb-4">
+                <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
                 <template x-if="agenda.length === 0">
                     <flux:text class="mt-2">Nothing scheduled.</flux:text>
                 </template>
