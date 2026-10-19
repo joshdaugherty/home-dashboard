@@ -169,14 +169,14 @@
         <template x-if="art && art.url">
             <img :src="art.url" alt="" referrerpolicy="no-referrer" x-on:error="$el.remove()" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3;">
         </template>
-        <div x-show="art" class="rounded-xl border border-zinc-800 p-3 text-[0.8rem] text-zinc-500" :style="`position: absolute; right: 1.5rem; bottom: 1.5rem; max-width: 20rem; transform: translate(${drift.x}px, ${drift.y}px)`">
-            <div class="italic text-zinc-400" x-text="art?.title"></div>
+        <div x-show="art" class="rounded-xl border p-3 text-[0.8rem]" :style="`position: absolute; right: 1.5rem; bottom: 1.5rem; max-width: 20rem; background: rgba(9, 9, 11, 0.72); border-color: rgba(82, 82, 91, 0.8); color: #d4d4d8; transform: translate(${drift.x}px, ${drift.y}px)`">
+            <div class="italic" style="color: #f4f4f5;" x-text="art?.title"></div>
             <div x-text="[art?.artist, art?.date].filter(Boolean).join(', ')"></div>
-            <div class="text-zinc-600" x-text="art?.credit"></div>
+            <div style="color: #a1a1aa;" x-text="art?.credit"></div>
         </div>
-        <div class="relative text-center text-zinc-500" :style="`transform: translate(${drift.x}px, ${drift.y}px)`">
+        <div class="relative text-center" :style="`color: #f4f4f5; transform: translate(${drift.x}px, ${drift.y}px)`">
             <div class="text-[clamp(4rem,18vmin,14rem)] font-extralight leading-none tabular-nums" x-text="now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })"></div>
-            <div class="mt-2 text-[clamp(1rem,3.5vmin,2.5rem)]" x-text="now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })"></div>
+            <div class="mt-2 text-[clamp(1rem,3.5vmin,2.5rem)]" style="color: #d4d4d8;" x-text="now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })"></div>
         </div>
     </div>
 </div>
