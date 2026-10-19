@@ -46,6 +46,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    |    /*
+    |--------------------------------------------------------------------------
+    | Location, units and data sources
+    |--------------------------------------------------------------------------
+    | Weather comes from Open-Meteo (no API key). Calendars are read-only iCal
+    | feeds fetched server-side; the URLs never reach the browser. `calendars`
+    | is an array, or a one-line JSON string such as the DASHBOARD_CALENDARS env:
+    |   [{"name":"Family","color":"sky","url":"https://..."}]
+    */
+    'timezone' => env('DASHBOARD_TIMEZONE', 'UTC'),
+    'units' => env('DASHBOARD_UNITS', 'imperial'), // imperial or metric
+    'location' => [
+        'latitude' => env('DASHBOARD_LATITUDE'),
+        'longitude' => env('DASHBOARD_LONGITUDE'),
+    ],
+    'calendars' => env('DASHBOARD_CALENDARS'),
+    'cache' => [
+        'weather' => 600,  // seconds
+        'calendar' => 600,
+    ],
+    'refresh' => (int) env('DASHBOARD_REFRESH', 300), // seconds between background re-renders
+
+    /*
+    |--------------------------------------------------------------------------
     | Assets
     |--------------------------------------------------------------------------
     | Passed to @vite() in the kiosk layout.

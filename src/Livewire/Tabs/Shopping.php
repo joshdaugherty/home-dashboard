@@ -2,9 +2,7 @@
 
 namespace JoshDaugherty\HomeDashboard\Livewire\Tabs;
 
-use Livewire\Component;
-
-class Shopping extends Component
+class Shopping extends Tab
 {
     public function render()
     {

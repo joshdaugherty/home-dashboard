@@ -2,12 +2,23 @@
 
 namespace JoshDaugherty\HomeDashboard\Livewire\Tabs;
 
-use Livewire\Component;
+use JoshDaugherty\HomeDashboard\Support\CalendarFeeds;
+use JoshDaugherty\HomeDashboard\Support\Weather;
 
-class Today extends Component
+class Today extends Tab
 {
-    public function render()
+    public function render(CalendarFeeds $calendars, Weather $weather)
     {
-        return view('home-dashboard::livewire.tabs.today');
+        $events = $calendars->events();
+
+        return view('home-dashboard::livewire.tabs.today', [
+            'timezone' => $calendars->timezone(),
+            'refresh' => $this->refreshSeconds(),
+            'weatherConfigured' => $weather->configured(),
+            'forecast' => $weather->forecast(),
+            'upcoming' => $calendars->upcoming(5),
+            'calendarError' => $events['error'],
+            'calendarsFailed' => $events['failed'],
+        ]);
     }
 }

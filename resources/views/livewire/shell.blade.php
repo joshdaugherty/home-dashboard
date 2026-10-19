@@ -36,7 +36,7 @@
                 class="absolute inset-0 overflow-y-auto overscroll-contain p-[clamp(0.75rem,2vmin,2rem)]"
                 aria-label="{{ $tab['label'] }}"
             >
-                @livewire($tab['component'], [], key('pane-'.$key))
+                @livewire($tab['component'], ['lazy' => 'on-load'], key('pane-'.$key))
             </section>
         @endforeach
     </main>

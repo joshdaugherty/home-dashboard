@@ -1,4 +1,110 @@
-<div class="flex h-full flex-col items-center justify-center gap-2 text-center">
-    <flux:heading size="xl">Calendar</flux:heading>
-    <flux:text>Nothing here yet.</flux:text>
+{{--
+    Month grid + agenda. All events for the window are sent once and navigation is
+    client-side (no round-trips on touch). Dates are plain Y-m-d strings in the
+    configured timezone, so the device's own timezone never matters.
+--}}
+<div
+    class="@container h-full"
+    wire:poll.{{ $refresh }}s
+    x-data="{
+        days: @js($days),
+        today: @js($today),
+        month: @js(substr($today, 0, 7)),
+        selected: @js($today),
+        dow: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+        get title() {
+            const [y, m] = this.month.split('-').map(Number);
+            return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString([], { month: 'long', year: 'numeric', timeZone: 'UTC' });
+        },
+        get cells() {
+            const [y, m] = this.month.split('-').map(Number);
+            const first = Date.UTC(y, m - 1, 1);
+            const start = first - new Date(first).getUTCDay() * 864e5;
+            return Array.from({ length: 42 }, (_, i) => {
+                const d = new Date(start + i * 864e5);
+                const key = d.toISOString().slice(0, 10);
+                return { key, n: d.getUTCDate(), out: d.getUTCMonth() !== m - 1, events: this.days[key] || [] };
+            });
+        },
+        get agenda() { return this.days[this.selected] || []; },
+        get selectedTitle() {
+            const [y, m, d] = this.selected.split('-').map(Number);
+            return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+        },
+        shift(n) {
+            const [y, m] = this.month.split('-').map(Number);
+            this.month = new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7);
+        },
+        goToday() { this.month = this.today.slice(0, 7); this.selected = this.today; },
+    }"
+>
+    @if ($error || ! $configured)
+        <div class="flex h-full flex-col items-center justify-center gap-2 text-center">
+            <flux:heading size="xl">Calendar</flux:heading>
+            <flux:text>{{ $error ?: 'Set DASHBOARD_CALENDARS to show your calendars.' }}</flux:text>
+        </div>
+    @else
+        <div class="flex h-full flex-col gap-4 @3xl:flex-row">
+            {{-- Month grid --}}
+            <section class="flex min-h-0 flex-[3] flex-col" aria-label="Month">
+                <div class="mb-2 flex items-center gap-2">
+                    <button type="button" @click="shift(-1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-2xl active:bg-zinc-800" aria-label="Previous month">‹</button>
+                    <flux:heading size="lg" class="flex-1 text-center" x-text="title"></flux:heading>
+                    <button type="button" @click="shift(1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl text-2xl active:bg-zinc-800" aria-label="Next month">›</button>
+                    <button type="button" @click="goToday()" class="min-h-12 rounded-xl px-4 text-[0.9rem] active:bg-zinc-800">Today</button>
+                </div>
+                <div class="grid grid-cols-7 text-center text-[0.8rem] text-zinc-500">
+                    <template x-for="(d, i) in dow" :key="i"><div x-text="d"></div></template>
+                </div>
+                <div class="grid min-h-0 flex-1 grid-cols-7 grid-rows-6 gap-1">
+                    <template x-for="c in cells" :key="c.key">
+                        <button
+                            type="button"
+                            @click="selected = c.key"
+                            class="flex min-h-0 min-w-0 flex-col items-center justify-start gap-1 rounded-xl border p-1"
+                            :class="[
+                                selected === c.key ? 'border-white bg-zinc-800' : 'border-zinc-800 active:bg-zinc-800/60',
+                                c.out ? 'text-zinc-600' : '',
+                            ]"
+                        >
+                            <span
+                                class="flex size-7 items-center justify-center rounded-full text-[0.9rem] tabular-nums"
+                                :class="c.key === today ? 'bg-white font-semibold text-zinc-950' : ''"
+                                x-text="c.n"
+                            ></span>
+                            <span class="flex flex-wrap justify-center gap-[3px]">
+                                <template x-for="(e, i) in c.events.slice(0, 4)" :key="i">
+                                    <span class="size-[0.45rem] rounded-full" :style="`background-color:${e.color}`"></span>
+                                </template>
+                            </span>
+                        </button>
+                    </template>
+                </div>
+            </section>
+
+            {{-- Agenda for the selected day --}}
+            <section class="flex min-h-0 flex-[2] flex-col overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4" aria-label="Agenda">
+                <flux:heading x-text="selectedTitle"></flux:heading>
+                <template x-if="agenda.length === 0">
+                    <flux:text class="mt-2">Nothing scheduled.</flux:text>
+                </template>
+                <template x-for="(e, i) in agenda" :key="i">
+                    <div class="mt-3 flex items-start gap-3">
+                        <span class="mt-[0.45rem] size-3 shrink-0 rounded-full" :style="`background-color:${e.color}`"></span>
+                        <div class="min-w-0">
+                            <div x-text="e.title"></div>
+                            <div class="text-[0.85rem] text-zinc-400">
+                                <span x-text="e.time"></span>
+                                <template x-if="e.location"><span x-text="' · ' + e.location"></span></template>
+                                <span class="text-zinc-500" x-text="' · ' + e.calendar"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                @if ($failed)
+                    <flux:text class="mt-4 text-amber-400">Couldn't load: {{ implode(', ', $failed) }}</flux:text>
+                @endif
+            </section>
+        </div>
+    @endif
 </div>

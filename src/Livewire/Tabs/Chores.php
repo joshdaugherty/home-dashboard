@@ -2,9 +2,7 @@
 
 namespace JoshDaugherty\HomeDashboard\Livewire\Tabs;
 
-use Livewire\Component;
-
-class Chores extends Component
+class Chores extends Tab
 {
     public function render()
     {
