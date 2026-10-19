@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use JoshDaugherty\HomeDashboard\Livewire\Tabs\Meals;
 use JoshDaugherty\HomeDashboard\Livewire\Tabs\Shopping;
 use JoshDaugherty\HomeDashboard\Support\Groceries;
+use JoshDaugherty\HomeDashboard\Support\Kroger;
 use JoshDaugherty\HomeDashboard\Tests\TestCase;
 use Livewire\Livewire;
 
@@ -245,6 +246,20 @@ class GroceriesTest extends TestCase
         config(['home-dashboard.kroger' => ['client_id' => 'kid', 'client_secret' => 'ksecret', 'location_id' => '02500622']]);
 
         Livewire::test(Shopping::class)->assertOk()->assertSee('Unsorted');
+    }
+
+    public function test_an_either_or_item_falls_back_to_the_first_thing_it_names(): void
+    {
+        config(['home-dashboard.kroger' => ['client_id' => 'kid', 'client_secret' => 'ksecret', 'location_id' => '02500622']]);
+        Http::fake([
+            'api.kroger.com/v1/connect/oauth2/token' => Http::response(['access_token' => 'tok']),
+            'api.kroger.com/v1/products*' => fn (Request $r) => Http::response(['data' => $r['filter.term'] === 'ground beef'
+                ? [['aisleLocations' => [['description' => 'PACKAGED MEAT']]]]
+                : []]),
+        ]);
+
+        $this->assertSame('PACKAGED MEAT', app(Kroger::class)->aisleFor('ground beef or turkey'));
+        $this->assertNull(app(Kroger::class)->aisleFor('side for crockpot meal'));
     }
 
     public function test_kroger_is_not_called_unless_configured(): void

@@ -42,14 +42,11 @@ class Kroger
         }
 
         try {
-            $response = Http::withToken($this->token())->acceptJson()->timeout(10)->get('https://api.kroger.com/v1/products', [
-                'filter.term' => $term,
-                'filter.locationId' => $this->setting('location_id'),
-                'filter.limit' => 5,
-            ]);
+            $label = $this->search($term);
 
-            if (! $response->successful()) {
-                throw new \RuntimeException('Kroger product search failed.');
+            // "ground beef or turkey" is shelved with the first thing it names when the whole phrase finds nothing.
+            if ($label === null && str_contains($term, ' or ')) {
+                $label = $this->search(trim(explode(' or ', $term)[0]));
             }
         } catch (Throwable) {
             // Try again in a few minutes rather than on every refresh.
@@ -58,13 +55,26 @@ class Kroger
             return null;
         }
 
-        $label = collect($response->json('data') ?? [])
-            ->map(fn ($product) => trim((string) ($product['aisleLocations'][0]['description'] ?? '')))
-            ->first(fn ($label) => $label !== '');
-
         Cache::put($key, $label ?? '', $label ? now()->addDays(30) : now()->addDay());
 
         return $label;
+    }
+
+    private function search(string $term): ?string
+    {
+        $response = Http::withToken($this->token())->acceptJson()->timeout(10)->get('https://api.kroger.com/v1/products', [
+            'filter.term' => $term,
+            'filter.locationId' => $this->setting('location_id'),
+            'filter.limit' => 5,
+        ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException('Kroger product search failed.');
+        }
+
+        return collect($response->json('data') ?? [])
+            ->map(fn ($product) => trim((string) ($product['aisleLocations'][0]['description'] ?? '')))
+            ->first(fn ($label) => $label !== '');
     }
 
     private function token(): string
