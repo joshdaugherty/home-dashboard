@@ -68,9 +68,9 @@
             {{-- Month grid --}}
             <section class="flex min-h-0 flex-[3] flex-col" aria-label="Month">
                 <div class="mb-2 flex items-center gap-2">
-                    <button type="button" @click="shift(-1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-white text-2xl text-white active:bg-zinc-700" style="background: rgba(24, 24, 27, 0.6);" aria-label="Previous month">‹</button>
+                    <button type="button" @click="shift(-1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-white text-2xl text-white active:bg-zinc-700" style="background: rgba(24, 24, 27, 0.6);" aria-label="Previous month"><svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
                     <flux:heading size="lg" class="flex-1 text-center" x-text="title"></flux:heading>
-                    <button type="button" @click="shift(1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-white text-2xl text-white active:bg-zinc-700" style="background: rgba(24, 24, 27, 0.6);" aria-label="Next month">›</button>
+                    <button type="button" @click="shift(1)" class="flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-white text-2xl text-white active:bg-zinc-700" style="background: rgba(24, 24, 27, 0.6);" aria-label="Next month"><svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
                     <button type="button" @click="goToday()" class="min-h-12 rounded-xl border border-white px-4 text-[0.9rem] text-white active:bg-zinc-700" style="background: rgba(24, 24, 27, 0.6);">Today</button>
                 </div>
                 <div class="grid grid-cols-7 text-center text-[0.8rem] text-zinc-500">

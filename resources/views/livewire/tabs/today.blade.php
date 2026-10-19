@@ -22,7 +22,7 @@
     @endforeach
     {{-- 1 column when narrow, 2 when wide. --}}
     <div class="grid min-h-0 grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
-        <div class="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-4" @if ($background) style="background: rgba(24, 24, 27, 0.9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);" @endif>
+        <div class="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-4" @if ($background) style="background: rgba(24, 24, 27, 0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);" @endif>
             @if ($radarUrl && $forecast)
                 <button type="button" @click="$dispatch('open-radar', @js($radarUrl))" class="rounded-xl text-[0.85rem] text-zinc-300 active:bg-zinc-700" style="position: absolute; top: 0.75rem; right: 0.75rem; min-height: 2.75rem; padding: 0.5rem 1rem; background: rgba(63, 63, 70, 0.5);">Radar</button>
             @endif
@@ -58,7 +58,7 @@
             @endif
         </div>
 
-        <div class="hd-card rounded-2xl border border-zinc-800 bg-zinc-900" @if ($background) style="background: rgba(24, 24, 27, 0.9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);" @endif>
+        <div class="hd-card rounded-2xl border border-zinc-800 bg-zinc-900" @if ($background) style="background: rgba(24, 24, 27, 0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);" @endif>
             <div class="hd-card-head"><flux:heading>Up next</flux:heading></div>
             <div class="px-4 pb-4">
             @if ($calendarError)
