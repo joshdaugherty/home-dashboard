@@ -128,8 +128,9 @@ class Background
             ->throw()
             ->json());
 
-        // Videos have no usable image, and copyrighted pictures stay on NASA's page.
-        if (($data['media_type'] ?? '') !== 'image' || ! empty($data['copyright']) || empty($data['url'])) {
+        // Videos have no usable image, and copyrighted pictures stay on NASA's page. NASA sometimes answers with a
+        // site asset (its own logo) instead of a picture, so only APOD's own image host counts.
+        if (($data['media_type'] ?? '') !== 'image' || ! empty($data['copyright']) || empty($data['url']) || parse_url((string) $data['url'], PHP_URL_HOST) !== 'apod.nasa.gov') {
             return null;
         }
 

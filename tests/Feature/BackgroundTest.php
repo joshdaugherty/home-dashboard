@@ -124,6 +124,22 @@ class BackgroundTest extends TestCase
             $this->assertStringContainsString('artic.edu', app(Background::class)->current(CarbonImmutable::parse('2026-11-19 '.$day.':00'))['url']);
         }
     }
+
+    public function test_a_nasa_site_asset_such_as_its_logo_is_not_treated_as_the_picture(): void
+    {
+        config(['home-dashboard.background.nasa_key' => 'k']);
+        Http::fake([
+            'api.nasa.gov/*' => Http::response(['media_type' => 'image', 'url' => 'https://science.nasa.gov/wp-content/themes/nasa-child/assets/images/nasa-logo@2x.png', 'title' => 'NASA Science']),
+            'api.artic.edu/*' => Http::response(['pagination' => ['total' => 0], 'data' => []]),
+        ]);
+
+        foreach ([10, 11] as $hour) {
+            $art = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 '.$hour.':00', 'America/Chicago'));
+
+            $this->assertStringNotContainsString('nasa', json_encode($art));
+        }
+    }
+
     public function test_the_picture_rotates_hourly_and_nasa_takes_the_odd_hours(): void
     {
         config(['home-dashboard.background.nasa_key' => 'k']);
@@ -172,7 +188,7 @@ class BackgroundTest extends TestCase
     public function test_long_descriptions_are_cut_at_a_sentence(): void
     {
         config(['home-dashboard.background.nasa_key' => 'k']);
-        Http::fake(['api.nasa.gov/*' => Http::response(['media_type' => 'image', 'url' => 'https://x/y.jpg', 'title' => 'T', 'date' => '2026-10-19', 'explanation' => str_repeat('A sentence about a galaxy. ', 30)])]);
+        Http::fake(['api.nasa.gov/*' => Http::response(['media_type' => 'image', 'url' => 'https://apod.nasa.gov/apod/image/y.jpg', 'title' => 'T', 'date' => '2026-10-19', 'explanation' => str_repeat('A sentence about a galaxy. ', 30)])]);
 
         $art = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 11:00'));
 
