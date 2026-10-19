@@ -111,7 +111,7 @@ The Shopping and Meals tabs read and write four Notion databases, so Notion stay
 | Database | Columns |
 | --- | --- |
 | **Aisles** | Name, Store (Kroger / Costco), Order (walking order; Costco can be its own aisle), Kroger aisle (optional label this row stands for), Description |
-| **Items** | Name, Aisle (relation), Need it (checkbox: ticked means it is on the list), Note (for example "need 1") |
+| **Items** | Name, Aisle (relation), Need it (checkbox: ticked means it is on the list), Note (for example "need 1"), Quantity (number; the Shopping tab sets it and clears it when the item is bought) |
 | **Meals** | Name, Ingredients (relation to Items), Recipe link, Notes |
 | **Meal Plan** | Name, Date (optional), Meal (relation), Added to list (checkbox), Done (checkbox) |
 
@@ -125,7 +125,7 @@ NOTION_MEALS=...
 NOTION_PLAN=...
 ```
 
-- **Shopping** lists every Item with Need it ticked, grouped by the Store of its Aisle (Kroger first; an item with no aisle counts as Kroger), alphabetically. Tapping an item unticks it in Notion. The box at the top adds items: matching known items appear as chips to tap, and the Add button puts a typed name on the list, creating a new Item when it is not already in the catalog. The aisle is for the shopping trip itself, so build a Notion view for that: filter Need it, and sort by a rollup of the Aisle's Order (an "Aisle order" rollup on Items) so the list follows the store's walking order.
+- **Shopping** lists every Item with Need it ticked, grouped by the Store of its Aisle (Kroger first; an item with no aisle counts as Kroger), alphabetically. Tapping an item unticks it in Notion; the ×N button beside it sets how many to buy. The box at the top adds items: matching known items appear as chips to tap, and the Add button puts a typed name on the list, creating a new Item when it is not already in the catalog. The aisle is for the shopping trip itself, so build a Notion view for that: filter Need it, and sort by a rollup of the Aisle's Order (an "Aisle order" rollup on Items) so the list follows the store's walking order.
 - **Meals** shows the plan for Sunday to Saturday and starts over each Sunday, when the groceries are bought. Tap a day to see its meal and ingredients, clear the meal, or (when the day is empty) choose one of the week's undated meals for it. A Meal Plan row with no Date is a meal planned for the week but not for a day: it appears in a plain list under "Pick one for the week"; tap it to see its ingredients and optionally give it a day. An undated row belongs to the week it was created in (from two days before that Sunday, so Friday and Saturday planning counts). Tick Done on an undated row to hide it.
 - Data is cached for a minute (items) to five minutes (aisles, meals, plan), and a failed refresh serves the last good copy. Changes made in Notion appear within about that time plus the pane's refresh. The token never reaches the browser, and only ids that came from the Items database can be ticked.
 

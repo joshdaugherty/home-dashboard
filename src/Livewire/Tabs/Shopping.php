@@ -18,6 +18,24 @@ class Shopping extends Tab
         $groceries->tick($id);
     }
 
+    /** The item whose quantity is being set. */
+    public ?string $editing = null;
+
+    public function edit(string $id): void
+    {
+        $this->editing = $id;
+    }
+
+    public function close(): void
+    {
+        $this->editing = null;
+    }
+
+    public function setQuantity(string $id, int $qty, Groceries $groceries): void
+    {
+        $groceries->setQuantity($id, $qty);
+    }
+
     /** Add what was typed: a known item goes back on the list, anything else becomes a new item. */
     public function add(Groceries $groceries): void
     {

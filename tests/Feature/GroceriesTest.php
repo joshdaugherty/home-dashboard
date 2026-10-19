@@ -340,6 +340,27 @@ class GroceriesTest extends TestCase
         $this->assertFalse(app(Groceries::class)->need('not-an-item'));
     }
 
+    public function test_the_quantity_of_an_item_can_be_set_and_goes_back_to_one_when_it_is_bought(): void
+    {
+        $this->fakeNotion();
+
+        Livewire::test(Shopping::class)->call('edit', 'i-eggs')->assertSet('editing', 'i-eggs')->assertSee('One more')
+            ->call('setQuantity', 'i-eggs', 3)->assertSee('×3')
+            ->call('setQuantity', 'i-eggs', 0)->assertSee('×1')
+            ->call('close')->assertSet('editing', null);
+
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-eggs') && ($r['properties']['Quantity']['number'] ?? null) === 3);
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-eggs') && ($r['properties']['Quantity']['number'] ?? null) === 1);
+
+        $groceries = app(Groceries::class);
+        $this->assertFalse($groceries->setQuantity('not-an-item', 2));
+        $groceries->setQuantity('i-eggs', 500);
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && ($r['properties']['Quantity']['number'] ?? null) === 99);
+
+        $groceries->tick('i-eggs');
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && ($r['properties']['Need it']['checkbox'] ?? null) === false && array_key_exists('number', $r['properties']['Quantity']) && $r['properties']['Quantity']['number'] === null);
+    }
+
     public function test_a_blank_or_oversized_name_is_not_added(): void
     {
         $this->fakeNotion();

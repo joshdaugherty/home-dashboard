@@ -48,7 +48,7 @@ class Groceries
 
             $store = ($aisles[$item['aisle']]['store'] ?? null) ?: 'Kroger';
             $groups[$store] ??= ['name' => $store, 'items' => []];
-            $groups[$store]['items'][] = ['id' => $item['id'], 'name' => $item['name'], 'note' => $item['note']];
+            $groups[$store]['items'][] = ['id' => $item['id'], 'name' => $item['name'], 'note' => $item['note'], 'qty' => $item['qty'] ?? 1];
         }
 
         foreach ($groups as &$group) {
@@ -129,7 +129,7 @@ class Groceries
             return null;
         }
 
-        $items[$id] = ['id' => $id, 'name' => $name, 'aisle' => null, 'need' => true, 'note' => ''];
+        $items[$id] = ['id' => $id, 'name' => $name, 'aisle' => null, 'need' => true, 'note' => '', 'qty' => 1];
         $this->store('items', $items, 60);
 
         return $name;
@@ -248,12 +248,33 @@ class Groceries
         }
 
         try {
-            $this->notion->update($itemId, ['Need it' => ['checkbox' => false]]);
+            // Bought: off the list, and the next time it is needed it starts at one again.
+            $this->notion->update($itemId, ['Need it' => ['checkbox' => false], 'Quantity' => ['number' => null]]);
         } catch (Throwable) {
             return false;
         }
 
-        $this->patchItems([$itemId => false]);
+        $this->patchItems([$itemId => false], 1);
+
+        return true;
+    }
+
+    /** How many of an item to buy (1 to 99). */
+    public function setQuantity(string $itemId, int $qty): bool
+    {
+        $qty = max(1, min(99, $qty));
+
+        if (! isset(($this->items() ?? [])[$itemId])) {
+            return false;
+        }
+
+        try {
+            $this->notion->update($itemId, ['Quantity' => ['number' => $qty]]);
+        } catch (Throwable) {
+            return false;
+        }
+
+        $this->patchItems([], $qty, $itemId);
 
         return true;
     }
@@ -365,7 +386,7 @@ class Groceries
         return array_map(fn ($i) => $start->addDays($i)->toDateString(), range(0, 6));
     }
 
-    /** @return array<string, array{id: string, name: string, aisle: ?string, need: bool, note: string}>|null */
+    /** @return array<string, array{id: string, name: string, aisle: ?string, need: bool, note: string, qty: int}>|null */
     private function items(): ?array
     {
         return $this->cached('items', 60, function () {
@@ -375,6 +396,7 @@ class Groceries
                 'aisle' => $this->relation($page, 'Aisle')[0] ?? null,
                 'need' => (bool) ($page['properties']['Need it']['checkbox'] ?? false),
                 'note' => $this->text($page, 'Note'),
+                'qty' => max(1, (int) ($page['properties']['Quantity']['number'] ?? 1)),
             ], $this->notion->query($this->notion->dataSource('items'))));
         });
     }
@@ -450,7 +472,7 @@ class Groceries
     }
 
     /** Keep the cached item list in step with a change we just made, so the screen updates at once. */
-    private function patchItems(array $need): void
+    private function patchItems(array $need, ?int $qty = null, ?string $qtyFor = null): void
     {
         foreach ([self::PREFIX.'items', self::PREFIX.'items:stale'] as $key) {
             $cached = Cache::get($key);
@@ -462,7 +484,12 @@ class Groceries
             foreach ($need as $id => $value) {
                 if (isset($cached[$id])) {
                     $cached[$id]['need'] = $value;
+                    $cached[$id]['qty'] = $qty ?? ($cached[$id]['qty'] ?? 1);
                 }
+            }
+
+            if ($qtyFor !== null && $qty !== null && isset($cached[$qtyFor])) {
+                $cached[$qtyFor]['qty'] = $qty;
             }
 
             Cache::put($key, $cached, $key === self::PREFIX.'items' ? 60 : now()->addDays(30));

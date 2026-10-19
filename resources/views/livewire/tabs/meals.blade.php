@@ -13,11 +13,9 @@
     @else
         @php($chosen = $picking ? collect($week['days'])->firstWhere('date', $picking) : null)
         @php($looking = $viewing ? collect($week['flexible'])->firstWhere('id', $viewing) : null)
-        <flux:heading size="lg" class="mb-4">This week</flux:heading>
-
         <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));">
             @foreach ($week['days'] as $day)
-                <button type="button" wire:key="day-{{ $day['date'] }}" wire:click="pick('{{ $day['date'] }}')" class="rounded-2xl border bg-zinc-900 p-4 text-left active:bg-zinc-800 {{ $day['today'] ? 'border-zinc-500' : 'border-zinc-800' }}" style="min-height: 7rem;">
+                <button type="button" wire:key="day-{{ $day['date'] }}" wire:click="pick('{{ $day['date'] }}')" class="flex flex-col items-stretch justify-start rounded-2xl border bg-zinc-900 p-4 text-left active:bg-zinc-800 {{ $day['today'] ? 'border-zinc-500' : 'border-zinc-800' }}" style="min-height: 7rem;">
                     <flux:heading class="{{ $day['past'] ? 'opacity-60' : '' }}">{{ $day['label'] }}@if ($day['today']) <span class="text-zinc-400">· today</span>@endif</flux:heading>
                     @forelse ($day['meals'] as $meal)
                         <div class="mt-2 flex items-center justify-between gap-3">
