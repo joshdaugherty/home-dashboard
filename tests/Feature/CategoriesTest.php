@@ -78,8 +78,10 @@ class CategoriesTest extends TestCase
             $this->feed('a', 'Family', null, 'Personal'),
             $this->feed('b', 'Homework', 'josie', 'Assignments'),
             $this->feed('c', 'Classes', 'josie', 'Class Schedule'),
+            $this->feed('d', 'Josie', 'josie', 'Personal'),
         ]);
         Http::fake([
+            'cal.example.com/d.ics' => Http::response($this->ics('Piano')),
             'cal.example.com/a.ics' => Http::response($this->ics('Dinner')),
             'cal.example.com/b.ics' => Http::response($this->ics('Essay')),
             'cal.example.com/c.ics' => Http::response($this->ics('Algebra')),
@@ -111,4 +113,30 @@ class CategoriesTest extends TestCase
             ->call('save')
             ->assertHasErrors('feeds.1.category');
     }
-}
+
+    public function test_filter_buttons_only_offer_people_and_shared_calendars_that_exist_on_the_tab(): void
+    {
+        app(Settings::class)->set('people', [
+            ['id' => 'josh', 'name' => 'Josh', 'email' => ''],
+            ['id' => 'josie', 'name' => 'Josie', 'email' => ''],
+            ['id' => 'amelia', 'name' => 'Amelia', 'email' => ''],
+        ]);
+        app(Settings::class)->set('calendars', [
+            $this->feed('a', 'Family', null, 'Personal'),
+            $this->feed('b', 'Josh', 'josh', 'Personal'),
+            $this->feed('c', 'Josie classes', 'josie', 'Class Schedule'),
+            $this->feed('d', 'Amelia classes', 'amelia', 'Class Schedule'),
+        ]);
+        Http::fake(['cal.example.com/*' => Http::response($this->ics('Thing'))]);
+
+        $tabs = config('home-dashboard.tabs');
+
+        Livewire::test(Calendar::class, $tabs['classes']['params'])
+            ->assertSet('only', ['Class Schedule'])
+            ->assertViewHas('hasShared', false)
+            ->assertViewHas('people', fn ($p) => array_column($p, 'name') === ['Josie', 'Amelia']);
+
+        Livewire::test(Calendar::class, $tabs['calendar']['params'])
+            ->assertViewHas('hasShared', true)
+            ->assertViewHas('people', fn ($p) => array_column($p, 'name') === ['Josh']);
+    }}

@@ -51,15 +51,19 @@
     @else
         <div class="flex h-full flex-col gap-3">
         {{-- Person / shared filter. Filtering is client-side over the events already sent. --}}
+        @if (count($people) + ($hasShared ? 1 : 0) > 1)
         <div class="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
             <div class="flex flex-wrap gap-1" role="group" aria-label="Whose">
                 <button type="button" @click="who = 'all'" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === 'all'">Everyone</button>
+                @if ($hasShared)
                 <button type="button" @click="who = 'shared'" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === 'shared' ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === 'shared'">Shared</button>
+                @endif
                 <template x-for="p in people" :key="p.id">
                     <button type="button" @click="who = p.id" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === p.id ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === p.id" x-text="p.name"></button>
                 </template>
             </div>
         </div>
+        @endif
         <div class="flex min-h-0 flex-1 flex-col gap-4 @3xl:flex-row">
             {{-- Month grid --}}
             <section class="flex min-h-0 flex-[3] flex-col" aria-label="Month">
