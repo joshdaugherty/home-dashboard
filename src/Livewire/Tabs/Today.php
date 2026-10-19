@@ -14,7 +14,7 @@ class Today extends Tab
 
         return view('home-dashboard::livewire.tabs.today', [
             'timezone' => $calendars->timezone(),
-            'background' => $background->today($calendars->now()->toDateString()),
+            'background' => $background->current($calendars->now()),
             'refresh' => $this->refreshSeconds(),
             'weatherConfigured' => $weather->configured(),
             'forecast' => $weather->forecast(),

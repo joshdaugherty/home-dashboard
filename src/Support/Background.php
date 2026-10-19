@@ -2,16 +2,17 @@
 
 namespace JoshDaugherty\HomeDashboard\Support;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * A different picture each day for the Today tab: a public-domain painting from the Art Institute of Chicago each day, for the
+ * A new picture every hour for the Today tab: a public-domain painting from the Art Institute of Chicago each day, for the
  * Today tab. The search is an allow-list (paintings of landscapes, seascapes, flowers and
  * animals, minus anything flagged nudity, death, violence or war), so no open search ever
  * reaches the frame. When a NASA API key is configured, NASA's Astronomy Picture of the Day
- * (images only, never copyrighted ones) takes every other day. The keys stay on the server:
+ * (images only, never copyrighted ones) takes every other hour (it is one picture per day). The keys stay on the server:
  * the browser only gets an image URL, loads it directly, and drops back to the plain
  * background if that fails.
  */
@@ -31,13 +32,17 @@ class Background
      *
      * @return array{url: string, title: string, artist: string, credit: string}|null
      */
-    public function today(string $date): ?array
+    public function current(CarbonImmutable $now): ?array
     {
         if (! $this->enabled()) {
             return null;
         }
 
-        $key = 'home-dashboard:background:'.$date;
+        // One slot per hour. With a NASA key the sources take turns by the hour; the painting
+        // changes every hour, while NASA's picture is the same all day by nature.
+        $date = $now->toDateString();
+        $hour = (int) $now->format('G');
+        $key = 'home-dashboard:background:'.$date.'-'.$hour;
 
         if (Cache::has($key.':failed')) {
             return null;
@@ -47,7 +52,7 @@ class Background
 
         if ($art === null) {
             try {
-                $art = $this->choose($date);
+                $art = $this->choose($date, $hour);
             } catch (Throwable) {
                 $art = null;
             }
@@ -58,20 +63,20 @@ class Background
                 return null;
             }
 
-            Cache::put($key, $art, now()->addDay());
+            Cache::put($key, $art, now()->addHours(2));
         }
 
         return $art;
     }
 
     /** @return array{url: string, title: string, artist: string, credit: string}|null */
-    private function choose(string $date): ?array
+    private function choose(string $date, int $hour): ?array
     {
-        $sources = [fn () => $this->artwork($date)];
+        $sources = [fn () => $this->artwork($date.'-'.$hour)];
 
         if ($this->nasaKey() !== '') {
-            // Alternate days; whichever source is up next falls back to the other.
-            $sources = crc32($date) % 2 === 0 ? array_reverse([fn () => $this->apod($date), ...$sources]) : [fn () => $this->apod($date), ...$sources];
+            // Alternate by the hour; whichever source is up next falls back to the other.
+            $sources = $hour % 2 === 0 ? [...$sources, fn () => $this->apod($date)] : [fn () => $this->apod($date), ...$sources];
         }
 
         foreach ($sources as $source) {
@@ -95,10 +100,11 @@ class Background
     /** @return array{url: string, title: string, artist: string, credit: string}|null */
     private function apod(string $date): ?array
     {
-        $data = Http::timeout(8)
+        // One picture per day, so ask NASA once a day however often the slot changes.
+        $data = Cache::remember('home-dashboard:apod:'.$date, now()->addDay(), fn () => Http::timeout(8)
             ->get('https://api.nasa.gov/planetary/apod', ['api_key' => $this->nasaKey(), 'date' => $date])
             ->throw()
-            ->json();
+            ->json());
 
         // Videos have no usable image, and copyrighted pictures stay on NASA's page.
         if (($data['media_type'] ?? '') !== 'image' || ! empty($data['copyright']) || empty($data['url'])) {

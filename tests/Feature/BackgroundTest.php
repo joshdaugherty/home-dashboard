@@ -2,6 +2,7 @@
 
 namespace JoshDaugherty\HomeDashboard\Tests\Feature;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -34,7 +35,7 @@ class BackgroundTest extends TestCase
     {
         $this->fakeMuseum([$this->work(1, 3000, 5000), $this->work(2, 4000, 2500), $this->work(3, 100, 100)]);
 
-        $art = app(Background::class)->today('2026-10-19');
+        $art = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00'));
 
         $this->assertSame('https://www.artic.edu/iiif/2/img2/full/1686,/0/default.jpg', $art['url']);
         $this->assertSame('Work 2', $art['title']);
@@ -46,7 +47,7 @@ class BackgroundTest extends TestCase
     {
         $this->fakeMuseum([$this->work(1, 4000, 2500)]);
 
-        app(Background::class)->today('2026-10-19');
+        app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00'));
 
         Http::assertSent(function ($request) {
             $body = json_encode($request->data());
@@ -61,15 +62,15 @@ class BackgroundTest extends TestCase
     public function test_the_day_is_cached_and_a_failure_is_remembered_briefly(): void
     {
         $this->fakeMuseum([$this->work(1, 4000, 2500)]);
-        app(Background::class)->today('2026-10-19');
-        app(Background::class)->today('2026-10-19');
+        app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00'));
+        app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00'));
         Http::assertSentCount(2); // total + one page, once
 
         Http::swap(new Factory);
         Http::fake(['api.artic.edu/*' => Http::response('nope', 500)]);
-        $this->assertNull(app(Background::class)->today('2026-10-20'));
-        $this->assertNull(app(Background::class)->today('2026-10-20'));
-        $this->assertTrue(Cache::has('home-dashboard:background:2026-10-20:failed'));
+        $this->assertNull(app(Background::class)->current(CarbonImmutable::parse('2026-10-20 09:00')));
+        $this->assertNull(app(Background::class)->current(CarbonImmutable::parse('2026-10-20 09:00')));
+        $this->assertTrue(Cache::has('home-dashboard:background:2026-10-20-9:failed'));
     }
 
     public function test_it_can_be_turned_off_without_any_request(): void
@@ -77,7 +78,7 @@ class BackgroundTest extends TestCase
         config(['home-dashboard.background.enabled' => false]);
         Http::fake();
 
-        $this->assertNull(app(Background::class)->today('2026-10-19'));
+        $this->assertNull(app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00')));
         Http::assertNothingSent();
     }
 
@@ -102,7 +103,7 @@ class BackgroundTest extends TestCase
 
         $sources = [];
         foreach (range(1, 6) as $day) {
-            $art = app(Background::class)->today('2026-10-0'.$day);
+            $art = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 '.$day.':00'));
             $sources[] = str_contains($art['url'], 'nasa.gov') ? 'nasa' : 'artic';
             $this->assertStringNotContainsString('secret-nasa-key', json_encode($art));
         }
@@ -120,6 +121,25 @@ class BackgroundTest extends TestCase
         ]);
 
         foreach (range(1, 4) as $day) {
-            $this->assertStringContainsString('artic.edu', app(Background::class)->today('2026-11-0'.$day)['url']);
+            $this->assertStringContainsString('artic.edu', app(Background::class)->current(CarbonImmutable::parse('2026-11-19 '.$day.':00'))['url']);
         }
+    }
+    public function test_the_picture_rotates_hourly_and_nasa_takes_the_odd_hours(): void
+    {
+        config(['home-dashboard.background.nasa_key' => 'k']);
+        Http::fake([
+            'api.nasa.gov/*' => Http::response(['media_type' => 'image', 'url' => 'https://apod.nasa.gov/a.jpg', 'title' => 'N']),
+            'api.artic.edu/*' => Http::response(['pagination' => ['total' => 1], 'data' => [$this->work(1, 4000, 2500)]]),
+        ]);
+
+        $at = fn (int $hour) => app(Background::class)->current(CarbonImmutable::parse('2026-10-19 '.$hour.':30'))['url'];
+
+        $this->assertStringContainsString('artic.edu', $at(10));
+        $this->assertStringContainsString('nasa.gov', $at(11));
+        $this->assertStringContainsString('artic.edu', $at(12));
+        $this->assertStringContainsString('nasa.gov', $at(13));
+
+        // NASA's picture is fetched once for the whole day.
+        Http::assertSentCount(5);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'api.nasa.gov'));
     }}
