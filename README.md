@@ -126,7 +126,8 @@ NOTION_PLAN=...
 ```
 
 - **Shopping** lists every Item with Need it ticked under its Aisle, sorted by Order. Tapping an item unticks it in Notion. Items without an aisle appear under "Unsorted".
-- **Meals** shows the next seven days of the plan. "Add ingredients to the list" ticks Need it on every ingredient of the planned meals that is not already on the list and sets Added to list on those plan rows, so pressing it twice does nothing the second time.
+- **Meals** shows the next seven days of the plan. A Meal Plan row with no Date is a meal planned for the week but not for a day: it appears under "Pick one for the week", and its Tonight button gives it today's date. Tick Done on an undated row to hide it.
+  "Add ingredients to the list" ticks Need it on every ingredient of the planned meals that is not already on the list and sets Added to list on those plan rows, so pressing it twice does nothing the second time.
 - Data is cached for a minute (items) to five minutes (aisles, meals, plan), and a failed refresh serves the last good copy. Changes made in Notion appear within about that time plus the pane's refresh. The token never reaches the browser, and only ids that came from the Items database can be ticked.
 
 ## Background pictures

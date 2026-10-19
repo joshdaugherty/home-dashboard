@@ -78,9 +78,10 @@ class Groceries
     }
 
     /**
-     * The next seven days of the meal plan, starting today. Null when unavailable.
+     * The next seven days of the meal plan, starting today, plus the meals planned for the week without a day
+     * (picked day-of). Null when unavailable.
      *
-     * @return list<array{date: string, label: string, today: bool, meals: list<array>}>|null
+     * @return array{days: list<array{date: string, label: string, today: bool, meals: list<array>}>, flexible: list<array>}|null
      */
     public function week(): ?array
     {
@@ -100,14 +101,12 @@ class Groceries
             $days[$day->toDateString()] = ['date' => $day->toDateString(), 'label' => $day->format('l, M j'), 'today' => $i === 0, 'meals' => []];
         }
 
-        foreach ($plan as $entry) {
-            if (! isset($days[$entry['date']])) {
-                continue;
-            }
+        $flexible = [];
 
+        foreach ($plan as $entry) {
             $meal = $meals[$entry['meal']] ?? null;
 
-            $days[$entry['date']]['meals'][] = [
+            $row = [
                 'id' => $entry['id'],
                 'name' => $meal['name'] ?? ($entry['name'] ?: 'Meal'),
                 'notes' => $meal['notes'] ?? '',
@@ -116,9 +115,36 @@ class Groceries
                     ->map(fn ($id) => isset($items[$id]) ? ['name' => $items[$id]['name'], 'need' => $items[$id]['need']] : null)
                     ->filter()->values()->all(),
             ];
+
+            if ($entry['date'] === '') {
+                $flexible[] = $row;
+            } elseif (isset($days[$entry['date']])) {
+                $days[$entry['date']]['meals'][] = $row;
+            }
         }
 
-        return array_values($days);
+        return ['days' => array_values($days), 'flexible' => $flexible];
+    }
+
+    /** Decide a day-of meal: give an undated plan entry today's date, so it moves into today's card. */
+    public function makeToday(string $planId): bool
+    {
+        $today = $this->calendars->now()->startOfDay();
+        $entry = collect($this->plan($today) ?? [])->firstWhere('id', $planId);
+
+        if (! $entry || $entry['date'] !== '') {
+            return false;
+        }
+
+        try {
+            $this->notion->update($planId, ['Date' => ['date' => ['start' => $today->toDateString()]]]);
+        } catch (Throwable) {
+            return false;
+        }
+
+        Cache::forget(self::PREFIX.$this->planKey($today));
+
+        return true;
     }
 
     /** Put the ingredients of the week's planned meals on the shopping list. Returns how many items were added. */
@@ -139,7 +165,7 @@ class Groceries
         foreach ($plan as $entry) {
             $meal = $meals[$entry['meal']] ?? null;
 
-            if ($entry['added'] || ! $meal) {
+            if ($entry['added'] || ! $meal || ($entry['date'] === '' && $entry['done'])) {
                 continue;
             }
 
@@ -208,25 +234,32 @@ class Groceries
         });
     }
 
-    /** @return list<array{id: string, name: string, date: string, meal: ?string, added: bool}>|null */
+    /** @return list<array{id: string, name: string, date: string, meal: ?string, added: bool, done: bool}>|null */
     private function plan(CarbonImmutable $from): ?array
     {
         return $this->cached($this->planKey($from), 300, function () use ($from) {
             $pages = $this->notion->query($this->notion->dataSource('plan'), [
-                'filter' => ['and' => [
-                    ['property' => 'Date', 'date' => ['on_or_after' => $from->toDateString()]],
-                    ['property' => 'Date', 'date' => ['on_or_before' => $from->addDays(6)->toDateString()]],
+                'filter' => ['or' => [
+                    ['and' => [
+                        ['property' => 'Date', 'date' => ['on_or_after' => $from->toDateString()]],
+                        ['property' => 'Date', 'date' => ['on_or_before' => $from->addDays(6)->toDateString()]],
+                    ]],
+                    ['and' => [
+                        ['property' => 'Date', 'date' => ['is_empty' => true]],
+                        ['property' => 'Done', 'checkbox' => ['equals' => false]],
+                    ]],
                 ]],
                 'sorts' => [['property' => 'Date', 'direction' => 'ascending']],
             ]);
 
-            return array_values(array_filter(array_map(fn ($page) => [
+            return array_map(fn ($page) => [
                 'id' => $page['id'],
                 'name' => $this->title($page, 'Name'),
                 'date' => substr((string) ($page['properties']['Date']['date']['start'] ?? ''), 0, 10),
                 'meal' => $this->relation($page, 'Meal')[0] ?? null,
                 'added' => (bool) ($page['properties']['Added to list']['checkbox'] ?? false),
-            ], $pages), fn ($entry) => $entry['date'] !== ''));
+                'done' => (bool) ($page['properties']['Done']['checkbox'] ?? false),
+            ], $pages);
         });
     }
 

@@ -14,6 +14,12 @@ class Meals extends Tab
         $this->added = $groceries->addWeekToList();
     }
 
+    /** A day-of decision: this meal is tonight's. */
+    public function makeToday(string $id, Groceries $groceries): void
+    {
+        $groceries->makeToday($id);
+    }
+
     public function render(Groceries $groceries)
     {
         return view('home-dashboard::livewire.tabs.meals', [

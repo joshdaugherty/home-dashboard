@@ -41,14 +41,17 @@ class GroceriesTest extends TestCase
                 ['id' => 'i-eggs', 'properties' => ['Name' => $this->title('egg'), 'Aisle' => ['relation' => [['id' => 'a-produce']]], 'Need it' => ['checkbox' => true], 'Note' => ['rich_text' => [['plain_text' => 'need 1']]]]],
                 ['id' => 'i-paper', 'properties' => ['Name' => $this->title('paper towels'), 'Aisle' => ['relation' => [['id' => 'a-costco']]], 'Need it' => ['checkbox' => true], 'Note' => ['rich_text' => []]]],
                 ['id' => 'i-lime', 'properties' => ['Name' => $this->title('lime'), 'Aisle' => ['relation' => [['id' => 'a-produce']]], 'Need it' => ['checkbox' => false], 'Note' => ['rich_text' => []]]],
+                ['id' => 'i-noodles', 'properties' => ['Name' => $this->title('noodles'), 'Aisle' => ['relation' => [['id' => 'a-produce']]], 'Need it' => ['checkbox' => false], 'Note' => ['rich_text' => []]]],
                 ['id' => 'i-mystery', 'properties' => ['Name' => $this->title('mystery'), 'Aisle' => ['relation' => []], 'Need it' => ['checkbox' => true], 'Note' => ['rich_text' => []]]],
             ], 'has_more' => false]),
             'api.notion.com/v1/data_sources/ds-meals/query' => Http::response(['results' => [
                 ['id' => 'm-tacos', 'properties' => ['Name' => $this->title('Tacos'), 'Ingredients' => ['relation' => [['id' => 'i-lime'], ['id' => 'i-eggs']]], 'Notes' => ['rich_text' => [['plain_text' => 'Friday favorite']]]]],
+                ['id' => 'm-pasta', 'properties' => ['Name' => $this->title('Pasta'), 'Ingredients' => ['relation' => [['id' => 'i-noodles']]], 'Notes' => ['rich_text' => []]]],
             ], 'has_more' => false]),
             'api.notion.com/v1/data_sources/ds-plan/query' => Http::response(['results' => [
                 ['id' => 'p-1', 'properties' => ['Name' => $this->title('Tacos night'), 'Date' => ['date' => ['start' => $tomorrow]], 'Meal' => ['relation' => [['id' => 'm-tacos']]], 'Added to list' => ['checkbox' => false]]],
                 ['id' => 'p-0', 'properties' => ['Name' => $this->title('Leftovers'), 'Date' => ['date' => ['start' => $today]], 'Meal' => ['relation' => []], 'Added to list' => ['checkbox' => true]]],
+                ['id' => 'p-flex', 'properties' => ['Name' => $this->title('Pasta'), 'Date' => ['date' => null], 'Meal' => ['relation' => [['id' => 'm-pasta']]], 'Added to list' => ['checkbox' => false], 'Done' => ['checkbox' => false]]],
             ], 'has_more' => false]),
             'api.notion.com/v1/pages/*' => Http::response(['id' => 'x']),
         ]);
@@ -132,23 +135,47 @@ class GroceriesTest extends TestCase
 
         $week = app(Groceries::class)->week();
 
-        $this->assertCount(7, $week);
-        $this->assertSame('Leftovers', $week[0]['meals'][0]['name']);
-        $this->assertSame('Tacos', $week[1]['meals'][0]['name']);
-        $this->assertSame(['lime', 'egg'], array_column($week[1]['meals'][0]['ingredients'], 'name'));
+        $this->assertCount(7, $week['days']);
+        $this->assertSame('Leftovers', $week['days'][0]['meals'][0]['name']);
+        $this->assertSame('Tacos', $week['days'][1]['meals'][0]['name']);
+        $this->assertSame(['lime', 'egg'], array_column($week['days'][1]['meals'][0]['ingredients'], 'name'));
+        $this->assertSame(['Pasta'], array_column($week['flexible'], 'name'), 'a meal without a day is offered to pick from');
 
         Livewire::test(Meals::class)->assertSee('Tacos')->assertSee('Friday favorite')->assertSee('Add ingredients to the list');
+    }
+
+    public function test_a_meal_without_a_day_can_be_made_tonights_and_only_such_meals(): void
+    {
+        $this->fakeNotion();
+
+        Livewire::test(Meals::class)->assertSee('Pick one for the week')->assertSee('Pasta')->call('makeToday', 'p-flex');
+
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/p-flex') && $r['properties']['Date']['date']['start'] === now('America/Chicago')->toDateString());
+
+        $this->assertFalse(app(Groceries::class)->makeToday('p-1'), 'a meal that already has a day is left alone');
+    }
+
+    public function test_the_plan_query_asks_for_this_week_and_undated_meals_that_are_not_done(): void
+    {
+        $this->fakeNotion();
+
+        app(Groceries::class)->week();
+
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'ds-plan/query')
+            && isset($r['filter']['or'][1]['and'][0]['date']['is_empty'])
+            && $r['filter']['or'][1]['and'][1]['property'] === 'Done');
     }
 
     public function test_adding_the_week_ticks_only_ingredients_not_already_needed_and_marks_the_plan(): void
     {
         $this->fakeNotion();
 
-        Livewire::test(Meals::class)->call('addToList')->assertSet('added', 1);
+        Livewire::test(Meals::class)->call('addToList')->assertSet('added', 2);
 
         Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-lime') && $r['properties']['Need it']['checkbox'] === true);
         Http::assertNotSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-eggs'));
         Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/p-1') && $r['properties']['Added to list']['checkbox'] === true);
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-noodles'));
         $this->assertContains('lime', collect(app(Groceries::class)->shoppingList())->pluck('items')->flatten(1)->pluck('name')->all());
     }
 
