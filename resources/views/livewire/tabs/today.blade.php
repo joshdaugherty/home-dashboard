@@ -16,8 +16,8 @@
         </div>
     @endif
     <div>
-        <div class="text-[clamp(3.5rem,14vmin,11rem)] font-light leading-none tabular-nums" x-text="fmt({ hour: 'numeric', minute: '2-digit' })"></div>
-        <flux:heading size="xl" class="mt-2" x-text="fmt({ weekday: 'long', month: 'long', day: 'numeric' })"></flux:heading>
+        <div class="text-[clamp(3.5rem,14vmin,11rem)] font-light leading-none tabular-nums" style="text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75), 0 1px 3px rgba(0, 0, 0, 0.6);" x-text="fmt({ hour: 'numeric', minute: '2-digit' })"></div>
+        <flux:heading size="xl" class="mt-2" style="text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75), 0 1px 3px rgba(0, 0, 0, 0.6);" x-text="fmt({ weekday: 'long', month: 'long', day: 'numeric' })"></flux:heading>
     </div>
 
     @foreach ($alerts as $alert)

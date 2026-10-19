@@ -174,7 +174,7 @@
             <div x-text="[art?.artist, art?.date].filter(Boolean).join(', ')"></div>
             <div style="color: #a1a1aa;" x-text="art?.credit"></div>
         </div>
-        <div class="relative text-center" :style="`color: #f4f4f5; transform: translate(${drift.x}px, ${drift.y}px)`">
+        <div class="relative text-center" :style="`color: #f4f4f5; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75), 0 1px 3px rgba(0, 0, 0, 0.6); transform: translate(${drift.x}px, ${drift.y}px)`">
             <div class="text-[clamp(4rem,18vmin,14rem)] font-extralight leading-none tabular-nums" x-text="now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })"></div>
             <div class="mt-2 text-[clamp(1rem,3.5vmin,2.5rem)]" style="color: #d4d4d8;" x-text="now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })"></div>
         </div>
