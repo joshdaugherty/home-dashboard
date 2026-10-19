@@ -16,7 +16,7 @@ class Today extends Tab
             'refresh' => $this->refreshSeconds(),
             'weatherConfigured' => $weather->configured(),
             'forecast' => $weather->forecast(),
-            'upcoming' => $calendars->upcoming(5),
+            'upcoming' => $calendars->upcoming(5, (array) config('home-dashboard.today_categories', CalendarFeeds::categories())),
             'calendarError' => $events['error'],
             'calendarsFailed' => $events['failed'],
         ]);

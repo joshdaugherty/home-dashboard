@@ -11,6 +11,14 @@
         today: @js($today),
         month: @js(substr($today, 0, 7)),
         selected: @js($today),
+        categories: @js($categories),
+        people: @js($people),
+        cat: 'all',
+        who: 'all',
+        visible(list) {
+            return (list || []).filter(e => (this.cat === 'all' || e.category === this.cat)
+                && (this.who === 'all' || (this.who === 'shared' ? !(e.person_ids || []).length : (e.person_ids || []).includes(this.who))));
+        },
         dow: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
         get title() {
             const [y, m] = this.month.split('-').map(Number);
@@ -23,10 +31,10 @@
             return Array.from({ length: 42 }, (_, i) => {
                 const d = new Date(start + i * 864e5);
                 const key = d.toISOString().slice(0, 10);
-                return { key, n: d.getUTCDate(), out: d.getUTCMonth() !== m - 1, events: this.days[key] || [] };
+                return { key, n: d.getUTCDate(), out: d.getUTCMonth() !== m - 1, events: this.visible(this.days[key]) };
             });
         },
-        get agenda() { return this.days[this.selected] || []; },
+        get agenda() { return this.visible(this.days[this.selected]); },
         get selectedTitle() {
             const [y, m, d] = this.selected.split('-').map(Number);
             return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
@@ -44,7 +52,24 @@
             <flux:text>{{ $error ?: 'Set DASHBOARD_CALENDARS to show your calendars.' }}</flux:text>
         </div>
     @else
-        <div class="flex h-full flex-col gap-4 @3xl:flex-row">
+        <div class="flex h-full flex-col gap-3">
+        {{-- Category tabs and a person / shared filter. Filtering is client-side over the events already sent. --}}
+        <div class="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
+            <div class="flex flex-wrap gap-1" role="tablist" aria-label="Category">
+                <button type="button" role="tab" @click="cat = 'all'" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="cat === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-selected="cat === 'all'">All</button>
+                <template x-for="c in categories" :key="c">
+                    <button type="button" role="tab" @click="cat = c" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="cat === c ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-selected="cat === c" x-text="c"></button>
+                </template>
+            </div>
+            <div class="flex flex-wrap gap-1" role="group" aria-label="Whose">
+                <button type="button" @click="who = 'all'" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === 'all'">Everyone</button>
+                <button type="button" @click="who = 'shared'" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === 'shared' ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === 'shared'">Shared</button>
+                <template x-for="p in people" :key="p.id">
+                    <button type="button" @click="who = p.id" class="min-h-12 rounded-xl px-4 text-[0.9rem]" :class="who === p.id ? 'bg-zinc-800 text-white' : 'text-zinc-400 active:bg-zinc-800/60'" :aria-pressed="who === p.id" x-text="p.name"></button>
+                </template>
+            </div>
+        </div>
+        <div class="flex min-h-0 flex-1 flex-col gap-4 @3xl:flex-row">
             {{-- Month grid --}}
             <section class="flex min-h-0 flex-[3] flex-col" aria-label="Month">
                 <div class="mb-2 flex items-center gap-2">
@@ -122,6 +147,7 @@
                     <flux:text class="mt-4 text-amber-400">Couldn't load: {{ implode(', ', $failed) }}</flux:text>
                 @endif
             </section>
+        </div>
         </div>
     @endif
 </div>

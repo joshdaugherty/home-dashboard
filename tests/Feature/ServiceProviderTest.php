@@ -11,7 +11,7 @@ class ServiceProviderTest extends TestCase
     public function test_config_is_merged(): void
     {
         $this->assertSame('today', config('home-dashboard.home_tab'));
-        $this->assertCount(6, config('home-dashboard.tabs'));
+        $this->assertCount(3, config('home-dashboard.tabs'));
     }
 
     public function test_views_namespace_is_registered(): void

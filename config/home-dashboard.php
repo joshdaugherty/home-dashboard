@@ -50,10 +50,7 @@ return [
     'tabs' => [
         'today' => ['label' => 'Today', 'icon' => 'sun', 'component' => 'home-dashboard.tabs.today'],
         'calendar' => ['label' => 'Calendar', 'icon' => 'calendar', 'component' => 'home-dashboard.tabs.calendar'],
-        'chores' => ['label' => 'Chores', 'icon' => 'check', 'component' => 'home-dashboard.tabs.chores'],
         'shopping' => ['label' => 'Shopping', 'icon' => 'cart', 'component' => 'home-dashboard.tabs.shopping'],
-        'photos' => ['label' => 'Photos', 'icon' => 'photo', 'component' => 'home-dashboard.tabs.photos'],
-        'home' => ['label' => 'Home', 'icon' => 'home', 'component' => 'home-dashboard.tabs.home'],
     ],
 
     /*
@@ -76,6 +73,10 @@ return [
     'calendars' => env('DASHBOARD_CALENDARS'),
     // The household, for avatars: [{"name":"Josh","email":"josh@example.com"}]. Calendars refer to a person by "person".
     'people' => env('DASHBOARD_PEOPLE'),
+    // Calendar categories, shown as tabs on the Calendar page. Each calendar belongs to one;
+    // the first is the default. Only `today_categories` feed the "Up next" list on Today.
+    'categories' => ['Personal', 'Class Schedule', 'Assignments'],
+    'today_categories' => ['Personal'],
     'cache' => [
         'weather' => 600,  // seconds
         'calendar' => 600,

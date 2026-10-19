@@ -71,6 +71,7 @@ class SettingsPage extends Component
             'url' => '',
             'saved' => false,
             'person' => '',
+            'category' => CalendarFeeds::categories()[0] ?? 'Personal',
         ];
     }
 
@@ -192,6 +193,7 @@ class SettingsPage extends Component
                 'feeds.*.name' => ['required', 'string', 'max:60'],
                 'feeds.*.color' => ['required', 'string', 'regex:/^(#[0-9a-fA-F]{3,8}|'.implode('|', array_keys(CalendarFeeds::PALETTE)).')$/'],
                 'feeds.*.person' => ['nullable', 'string'],
+                'feeds.*.category' => ['required', Rule::in(CalendarFeeds::categories())],
                 'feeds.*.url' => ['nullable', 'string', 'max:2000', 'regex:#^(https?|webcal)://[^\s]+$#i'],
             ],
             'location' => [
@@ -222,7 +224,7 @@ class SettingsPage extends Component
                     return;
                 }
 
-                $list[] = ['id' => $feed['id'], 'name' => trim($feed['name']), 'color' => $feed['color'], 'url' => $url, 'person' => in_array($feed['person'], $ids, true) ? $feed['person'] : null];
+                $list[] = ['id' => $feed['id'], 'name' => trim($feed['name']), 'color' => $feed['color'], 'url' => $url, 'person' => in_array($feed['person'], $ids, true) ? $feed['person'] : null, 'category' => $feed['category']];
             }
 
             $settings->set('calendars', $list);
@@ -270,6 +272,7 @@ class SettingsPage extends Component
     {
         return view('home-dashboard::livewire.settings', [
             'palette' => CalendarFeeds::PALETTE,
+            'categories' => CalendarFeeds::categories(),
             'back' => route(config('home-dashboard.route.name', 'home-dashboard.index')),
         ]);
     }
@@ -285,6 +288,7 @@ class SettingsPage extends Component
             'url' => '',
             'saved' => true,
             'person' => $feed['person'] ?? '',
+            'category' => $feed['category'],
         ], app(CalendarFeeds::class)->feeds()['feeds']);
 
         $this->people = array_map(fn (array $p) => ['id' => $p['id'], 'name' => $p['name'], 'email' => $p['email'] ?? ''], app(People::class)->all());

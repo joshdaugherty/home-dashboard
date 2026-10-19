@@ -25,6 +25,12 @@ class CalendarFeeds
         'violet' => '#a78bfa', 'orange' => '#fb923c', 'teal' => '#2dd4bf', 'pink' => '#f472b6',
     ];
 
+    /** The calendar categories, in display order. The first is the default for a calendar. */
+    public static function categories(): array
+    {
+        return array_values(array_filter((array) config('home-dashboard.categories', ['Personal'])));
+    }
+
     private function settings(): Settings
     {
         return app(Settings::class);
@@ -101,6 +107,7 @@ class CalendarFeeds
                 'color' => self::PALETTE[$color] ?? (preg_match('/^#[0-9a-f]{3,8}$/i', $color) ? $color : $colors[$i % count($colors)]),
                 'url' => self::normalizeUrl($url),
                 'person' => is_array($item) && ($item['person'] ?? '') !== '' ? (string) $item['person'] : null,
+                'category' => in_array($item['category'] ?? null, self::categories(), true) ? $item['category'] : (self::categories()[0] ?? 'Personal'),
             ];
         }
 
@@ -165,7 +172,7 @@ class CalendarFeeds
             // Name, color and person come from the current settings, not the cached copy,
             // so edits on the settings page show up straight away.
             foreach ($list as $event) {
-                $events[] = array_merge($event, ['calendar' => $feed['name'], 'color' => $feed['color'], 'person' => $feed['person'] ?? null]);
+                $events[] = array_merge($event, ['calendar' => $feed['name'], 'color' => $feed['color'], 'person' => $feed['person'] ?? null, 'category' => $feed['category']]);
             }
         }
 
@@ -195,7 +202,7 @@ class CalendarFeeds
         $merged = [];
 
         foreach ($events as $event) {
-            $key = mb_strtolower(trim($event['title'])).'|'.$event['start'].'|'.$event['end'].'|'.(int) $event['all_day'];
+            $key = ($event['category'] ?? '').'|'.mb_strtolower(trim($event['title'])).'|'.$event['start'].'|'.$event['end'].'|'.(int) $event['all_day'];
 
             if (! isset($merged[$key])) {
                 $merged[$key] = $event + ['calendars' => [], 'colors' => [], 'person_colors' => []];
@@ -261,6 +268,8 @@ class CalendarFeeds
                     'color' => $event['color'],
                     'swatch' => $event['swatch'],
                     'people' => $event['people'] ?? [],
+                    'category' => $event['category'] ?? null,
+                    'person_ids' => array_keys($event['person_colors'] ?? []),
                     'location' => $event['location'],
                     'all_day' => $event['all_day'],
                     'time' => $event['all_day'] ? 'All day' : ($isFirst ? Carbon::parse($event['start'])->format('g:i A') : 'Continues'),
@@ -285,7 +294,7 @@ class CalendarFeeds
      *
      * @return list<array<string, mixed>>
      */
-    public function upcoming(int $limit = 5): array
+    public function upcoming(int $limit = 5, ?array $categories = null): array
     {
         $now = $this->now();
         $days = $this->byDay();
@@ -295,6 +304,10 @@ class CalendarFeeds
             $date = $now->addDays($i);
 
             foreach ($days[$date->toDateString()] ?? [] as $event) {
+                if ($categories !== null && ! in_array($event['category'], $categories, true)) {
+                    continue;
+                }
+
                 // Skip timed events that have already finished today.
                 if (! $event['all_day'] && $i === 0 && $event['ends'] < $now->format('Y-m-d H:i:s')) {
                     continue;

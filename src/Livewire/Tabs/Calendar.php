@@ -12,6 +12,8 @@ class Calendar extends Tab
 
         return view('home-dashboard::livewire.tabs.calendar', [
             'days' => (object) $calendars->byDay(),
+            'categories' => CalendarFeeds::categories(),
+            'people' => array_map(fn (array $p) => ['id' => $p['id'], 'name' => $p['name']], app(\JoshDaugherty\HomeDashboard\Support\People::class)->all()),
             'today' => $calendars->now()->toDateString(),
             'refresh' => $this->refreshSeconds(),
             'configured' => $calendars->feeds()['feeds'] !== [],

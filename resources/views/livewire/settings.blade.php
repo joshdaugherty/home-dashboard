@@ -75,6 +75,12 @@
                             </div>
                         </div>
 
+                        <flux:select wire:model="feeds.{{ $i }}.category" label="Category">
+                            @foreach ($categories as $category)
+                                <flux:select.option value="{{ $category }}">{{ $category }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+
                         @if ($people)
                             <flux:select wire:model="feeds.{{ $i }}.person" label="Whose calendar">
                                 <flux:select.option value="">Nobody in particular</flux:select.option>
