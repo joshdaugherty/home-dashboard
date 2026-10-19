@@ -3,7 +3,19 @@
     "description": "A responsive, touch-first family dashboard kiosk (Livewire + Flux) for a wall-mounted photo frame.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["laravel", "livewire", "flux", "dashboard", "kiosk"],
+    "keywords": ["laravel", "livewire", "flux", "dashboard", "kiosk", "calendar", "ical", "weather"],
+    "homepage": "https://github.com/joshdaugherty/home-dashboard",
+    "authors": [
+        {
+            "name": "Josh Daugherty",
+            "email": "15675878+joshdaugherty@users.noreply.github.com",
+            "homepage": "https://github.com/joshdaugherty"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/joshdaugherty/home-dashboard/issues",
+        "source": "https://github.com/joshdaugherty/home-dashboard"
+    },
     "require": {
         "php": "^8.3",
         "illuminate/support": "^13.0",
