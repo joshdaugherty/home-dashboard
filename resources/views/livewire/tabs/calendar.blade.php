@@ -74,7 +74,7 @@
                             ></span>
                             <span class="flex flex-wrap justify-center gap-[3px]">
                                 <template x-for="(e, i) in c.events.slice(0, 4)" :key="i">
-                                    <span class="size-[0.45rem] rounded-full" :style="`background-color:${e.color}`"></span>
+                                    <span class="size-[0.45rem] rounded-full" :style="`background:${e.swatch}`"></span>
                                 </template>
                             </span>
                         </button>
@@ -90,7 +90,7 @@
                 </template>
                 <template x-for="(e, i) in agenda" :key="i">
                     <div class="mt-3 flex items-start gap-3">
-                        <span class="mt-[0.45rem] size-3 shrink-0 rounded-full" :style="`background-color:${e.color}`"></span>
+                        <span class="mt-[0.45rem] size-3 shrink-0 rounded-full" :style="`background:${e.swatch}`"></span>
                         <div class="min-w-0">
                             <div x-text="e.title"></div>
                             <div class="text-[0.85rem] text-zinc-400">

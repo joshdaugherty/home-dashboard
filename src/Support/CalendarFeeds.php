@@ -164,11 +164,57 @@ class CalendarFeeds
             array_push($events, ...$list);
         }
 
+        $events = self::mergeDuplicates($events);
+
         usort($events, fn ($a, $b) => [$a['start'], $a['title']] <=> [$b['start'], $b['title']]);
 
         return $this->memo['events'] = compact('events', 'failed', 'error');
     }
 
+    /**
+     * Collapse the same event appearing on several calendars (same title, start,
+     * end and all-day flag) into one item that remembers every calendar it is on.
+     *
+     * @param  list<array<string, mixed>>  $events
+     * @return list<array<string, mixed>>
+     */
+    public static function mergeDuplicates(array $events): array
+    {
+        $merged = [];
+
+        foreach ($events as $event) {
+            $key = mb_strtolower(trim($event['title'])).'|'.$event['start'].'|'.$event['end'].'|'.(int) $event['all_day'];
+
+            if (! isset($merged[$key])) {
+                $merged[$key] = $event + ['calendars' => [], 'colors' => []];
+            }
+
+            if (! in_array($event['calendar'], $merged[$key]['calendars'], true)) {
+                $merged[$key]['calendars'][] = $event['calendar'];
+                $merged[$key]['colors'][] = $event['color'];
+            }
+
+            $merged[$key]['location'] ??= $event['location'];
+        }
+
+        return array_values(array_map(function (array $event) {
+            $colors = array_values(array_unique($event['colors']));
+            $share = 100 / count($colors);
+
+            $event['calendar'] = implode(', ', $event['calendars']);
+            $event['color'] = $colors[0];
+            // One solid color, or an even conic split so a shared event shows every calendar's color.
+            $event['swatch'] = count($colors) === 1
+                ? $colors[0]
+                : 'conic-gradient('.implode(', ', array_map(
+                    fn ($color, $i) => $color.' '.round($i * $share, 2).'% '.round(($i + 1) * $share, 2).'%',
+                    $colors,
+                    array_keys($colors),
+                )).')';
+
+            return $event;
+        }, $merged));
+    }
     /**
      * Events bucketed by local date (Y-m-d), all-day first, then by time.
      * Multi-day events appear on every day they cover.
@@ -195,7 +241,9 @@ class CalendarFeeds
                 $days[$day->toDateString()][] = [
                     'title' => $event['title'],
                     'calendar' => $event['calendar'],
+                    'calendars' => $event['calendars'],
                     'color' => $event['color'],
+                    'swatch' => $event['swatch'],
                     'location' => $event['location'],
                     'all_day' => $event['all_day'],
                     'time' => $event['all_day'] ? 'All day' : ($isFirst ? Carbon::parse($event['start'])->format('g:i A') : 'Continues'),
