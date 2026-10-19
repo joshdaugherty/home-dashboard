@@ -171,10 +171,25 @@ ICS;
         config(['home-dashboard.calendars' => '{not json']);
         $this->assertSame('DASHBOARD_CALENDARS is not valid JSON.', (new CalendarFeeds)->feeds()['error']);
 
-        config(['home-dashboard.calendars' => [['name' => 'No url']]]);
+        config(['home-dashboard.calendars' => [['name' => 'Wrong scheme', 'url' => 'ftp://example.com/x.ics']]]);
         $this->assertStringContainsString('needs an http(s) or webcal url', (new CalendarFeeds)->feeds()['error']);
 
         config(['home-dashboard.calendars' => null]);
         $this->assertSame([], (new CalendarFeeds)->feeds()['feeds']);
+    }
+
+    public function test_placeholder_entries_with_blank_or_bare_scheme_urls_are_skipped(): void
+    {
+        config(['home-dashboard.calendars' => json_encode([
+            ['name' => 'Real', 'url' => 'https://calendar.example.com/real.ics'],
+            ['name' => 'Blank', 'url' => ''],
+            ['name' => 'Bare scheme', 'url' => 'https://'],
+            ['name' => 'Missing url'],
+        ])]);
+
+        $result = (new CalendarFeeds)->feeds();
+
+        $this->assertNull($result['error']);
+        $this->assertSame(['Real'], array_column($result['feeds'], 'name'));
     }
 }

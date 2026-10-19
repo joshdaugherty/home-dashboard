@@ -62,7 +62,14 @@ class CalendarFeeds
         $colors = array_values(self::PALETTE);
 
         foreach (array_values($raw ?? []) as $i => $item) {
-            $url = is_array($item) ? ($item['url'] ?? null) : null;
+            $url = is_array($item) ? trim((string) ($item['url'] ?? '')) : null;
+
+            // A blank url or a bare scheme ("https://") is a placeholder: skip it so the
+            // other feeds still load while the list is being filled in.
+            if ($url === '' || (is_string($url) && preg_match('#^(https?|webcal)://?$#i', $url))) {
+                continue;
+            }
+
             if (! is_string($url) || ! preg_match('#^(https?|webcal)://#i', $url)) {
                 return ['feeds' => [], 'error' => 'Calendar '.($i + 1).' needs an http(s) or webcal url.'];
             }
