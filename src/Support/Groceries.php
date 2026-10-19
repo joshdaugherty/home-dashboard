@@ -66,25 +66,25 @@ class Groceries
      *
      * @return array{0: array, 1: array}
      */
-    private function fileUnsorted(array $items, array $aisles): array
+    private function fileUnsorted(array $items, array $aisles, bool $onlyNeeded = true, int $limit = 5): array
     {
         if (! $this->kroger->configured()) {
             return [$items, $aisles];
         }
 
-        $todo = array_filter($items, fn ($item) => $item['need'] && $item['aisle'] === null && $this->kroger->pending($item['name']));
+        $todo = array_filter($items, fn ($item) => (! $onlyNeeded || $item['need']) && $item['aisle'] === null && $this->kroger->pending($item['name']));
 
         if ($todo === []) {
             return [$items, $aisles];
         }
 
         try {
-            return Cache::lock('home-dashboard:notion:filing', 30)->block(3, function () use ($todo) {
+            return Cache::lock('home-dashboard:notion:filing', max(30, $limit * 3))->block(3, function () use ($todo, $limit) {
                 // Another request may have filed things while we waited for the lock.
                 $items = $this->items() ?? [];
                 $aisles = $this->aisles() ?? [];
 
-                foreach (array_slice($todo, 0, 5, true) as $id => $item) {
+                foreach (array_slice($todo, 0, $limit, true) as $id => $item) {
                     $label = $this->kroger->aisleFor($item['name']);
 
                     if ($label === null || ($items[$id]['aisle'] ?? null) !== null) {
@@ -96,6 +96,9 @@ class Groceries
                         $this->notion->update($id, ['Aisle' => ['relation' => [['id' => $aisleId]]]]);
                         $items[$id]['aisle'] = $aisleId;
                     } catch (Throwable) {
+                        // Not filed: forget Kroger's answer so the next refresh tries again instead of skipping this item.
+                        $this->kroger->forget($item['name']);
+
                         continue;
                     }
                 }
@@ -108,6 +111,24 @@ class Groceries
         } catch (Throwable) {
             return [$items, $aisles];
         }
+    }
+
+    /**
+     * File the whole catalog (needed or not) that has no aisle yet, up to a limit. Returns how many items remain
+     * without an aisle afterwards, so callers can run it again.
+     */
+    public function fileCatalog(int $limit = 25): ?int
+    {
+        $items = $this->items();
+        $aisles = $this->aisles();
+
+        if ($items === null || $aisles === null || ! $this->kroger->configured()) {
+            return null;
+        }
+
+        [$items] = $this->fileUnsorted($items, $aisles, false, $limit);
+
+        return count(array_filter($items, fn ($item) => $item['aisle'] === null && $this->kroger->pending($item['name'])));
     }
 
     /** The Aisles row standing for a Kroger label, creating it when there is none yet. */

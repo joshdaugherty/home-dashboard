@@ -2,6 +2,7 @@
 
 namespace JoshDaugherty\HomeDashboard\Support;
 
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -90,6 +91,8 @@ class Notion
             ->withHeaders(['Notion-Version' => self::VERSION])
             ->acceptJson()
             ->asJson()
-            ->timeout(10);
+            ->timeout(10)
+            // Notion allows about three requests a second; wait and try again rather than lose a write.
+            ->retry([500, 1500, 3000], 0, fn ($e) => $e instanceof RequestException && $e->response->status() === 429, false);
     }
 }

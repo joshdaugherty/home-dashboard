@@ -42,11 +42,12 @@ class Kroger
         }
 
         try {
-            $label = $this->search($term);
+            $label = null;
 
-            // "ground beef or turkey" is shelved with the first thing it names when the whole phrase finds nothing.
-            if ($label === null && str_contains($term, ' or ')) {
-                $label = $this->search(trim(explode(' or ', $term)[0]));
+            foreach ($this->candidates($term) as $candidate) {
+                if (($label = $this->search($candidate)) !== null) {
+                    break;
+                }
             }
         } catch (Throwable) {
             // Try again in a few minutes rather than on every refresh.
@@ -58,6 +59,32 @@ class Kroger
         Cache::put($key, $label ?? '', $label ? now()->addDays(30) : now()->addDay());
 
         return $label;
+    }
+
+    /** Forget a remembered answer, so the next lookup asks Kroger again. */
+    public function forget(string $item): void
+    {
+        Cache::forget($this->key($this->term($item)));
+    }
+
+    /**
+     * Search phrases to try in order: the whole phrase, then without the container ("jar of red sauce" is shelved as
+     * red sauce), then the first of an either-or ("ground beef or turkey" is shelved with ground beef).
+     *
+     * @return list<string>
+     */
+    private function candidates(string $term): array
+    {
+        $plain = trim((string) preg_replace('/^(?:(?:microwave|frozen)\s+)?(?:bag|box|jar|bottle|can|carton|package|pack|loaf|tub|block|bunch)\s+of\s+/', '', $term));
+        $phrases = [$term, $plain];
+
+        foreach ([$term, $plain] as $phrase) {
+            if (str_contains($phrase, ' or ')) {
+                $phrases[] = trim(explode(' or ', $phrase)[0]);
+            }
+        }
+
+        return array_values(array_unique(array_filter($phrases)));
     }
 
     private function search(string $term): ?string
@@ -98,7 +125,7 @@ class Kroger
 
     private function key(string $term): string
     {
-        return 'home-dashboard:kroger:v1:aisle:'.$this->setting('location_id').':'.md5($term);
+        return 'home-dashboard:kroger:v2:aisle:'.$this->setting('location_id').':'.md5($term);
     }
 
     private function setting(string $name): ?string

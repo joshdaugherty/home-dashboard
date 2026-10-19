@@ -43,6 +43,7 @@ class GroceriesTest extends TestCase
                 ['id' => 'i-paper', 'properties' => ['Name' => $this->title('paper towels'), 'Aisle' => ['relation' => [['id' => 'a-costco']]], 'Need it' => ['checkbox' => true], 'Note' => ['rich_text' => []]]],
                 ['id' => 'i-lime', 'properties' => ['Name' => $this->title('lime'), 'Aisle' => ['relation' => [['id' => 'a-produce']]], 'Need it' => ['checkbox' => false], 'Note' => ['rich_text' => []]]],
                 ['id' => 'i-noodles', 'properties' => ['Name' => $this->title('noodles'), 'Aisle' => ['relation' => [['id' => 'a-produce']]], 'Need it' => ['checkbox' => false], 'Note' => ['rich_text' => []]]],
+                ['id' => 'i-spare', 'properties' => ['Name' => $this->title('spare item'), 'Aisle' => ['relation' => []], 'Need it' => ['checkbox' => false], 'Note' => ['rich_text' => []]]],
                 ['id' => 'i-mystery', 'properties' => ['Name' => $this->title('mystery'), 'Aisle' => ['relation' => []], 'Need it' => ['checkbox' => true], 'Note' => ['rich_text' => []]]],
             ], 'has_more' => false]),
             'api.notion.com/v1/data_sources/ds-meals/query' => Http::response(['results' => [
@@ -260,6 +261,23 @@ class GroceriesTest extends TestCase
 
         $this->assertSame('PACKAGED MEAT', app(Kroger::class)->aisleFor('ground beef or turkey'));
         $this->assertNull(app(Kroger::class)->aisleFor('side for crockpot meal'));
+    }
+
+    public function test_the_file_items_command_files_the_whole_catalog_not_just_what_is_on_the_list(): void
+    {
+        $this->fakeNotion($this->fakeKroger());
+
+        $this->artisan('home-dashboard:file-items')->expectsOutputToContain('0 without an aisle yet')->assertSuccessful();
+
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-spare'));
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-mystery'));
+    }
+
+    public function test_the_file_items_command_says_so_when_kroger_is_not_configured(): void
+    {
+        $this->fakeNotion();
+
+        $this->artisan('home-dashboard:file-items')->assertFailed();
     }
 
     public function test_kroger_is_not_called_unless_configured(): void

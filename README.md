@@ -140,7 +140,7 @@ KROGER_CLIENT_SECRET=...      # server-side only, like the Notion token
 KROGER_LOCATION_ID=...        # division + store number: kroger.com/stores/.../025/00622 is 02500622
 ```
 
-The aisle row is found by its "Kroger aisle" label (for example `AISLE 14` or `DAIRY`) or created on first use ("Aisle 14", ordered by number; named sections such as Dairy start at 500 for you to reorder), and the item's Aisle is written back to Notion, so an aisle you choose yourself is never overwritten. At most five lookups run per refresh, answers are remembered for 30 days (a miss for a day, a failure for five minutes), and nothing breaks when Kroger is unreachable: items just stay under Unsorted.
+The aisle row is found by its "Kroger aisle" label (for example `AISLE 14` or `DAIRY`) or created on first use ("Aisle 14", ordered by number; named sections such as Dairy start at 500 for you to reorder), and the item's Aisle is written back to Notion, so an aisle you choose yourself is never overwritten. At most five lookups run per refresh, answers are remembered for 30 days (a miss for a day, a failure for five minutes), and nothing breaks when Kroger is unreachable: items just stay under Unsorted. Phrases are tried whole, then without the container ("jar of red sauce" as "red sauce"), then as the first of an either-or ("ground beef or turkey" as "ground beef"). To file a whole catalog at once instead of as items reach the list, run `php artisan home-dashboard:file-items`; Notion writes are retried when it rate-limits.
 
 ## Background pictures
 

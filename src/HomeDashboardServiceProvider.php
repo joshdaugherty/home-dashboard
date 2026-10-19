@@ -4,6 +4,7 @@ namespace JoshDaugherty\HomeDashboard;
 
 use Illuminate\Support\ServiceProvider;
 use JoshDaugherty\HomeDashboard\Console\CreateUserCommand;
+use JoshDaugherty\HomeDashboard\Console\FileItemsCommand;
 use JoshDaugherty\HomeDashboard\Console\InstallCommand;
 use JoshDaugherty\HomeDashboard\Livewire\SettingsPage;
 use JoshDaugherty\HomeDashboard\Livewire\Shell;
@@ -42,7 +43,7 @@ class HomeDashboardServiceProvider extends ServiceProvider
         Livewire::component('home-dashboard.tabs.home', Tabs\Home::class);
 
         if ($this->app->runningInConsole()) {
-            $this->commands([InstallCommand::class, CreateUserCommand::class]);
+            $this->commands([InstallCommand::class, CreateUserCommand::class, FileItemsCommand::class]);
 
             $this->publishes([
                 __DIR__.'/../config/home-dashboard.php' => config_path('home-dashboard.php'),
