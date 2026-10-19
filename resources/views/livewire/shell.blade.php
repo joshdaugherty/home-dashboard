@@ -12,6 +12,11 @@
         art: null,
         artOpen: false,
         artTimer: null,
+        radar: null,
+        radarSrc: '',
+        radarTimer: null,
+        closeOverlays() { this.artOpen = false; this.radar = null; },
+        openRadar(url) { this.radarSrc = url + '?t=' + Date.now(); this.radar = url; clearTimeout(this.radarTimer); this.radarTimer = setTimeout(() => this.radar = null, 60000); },
         now: new Date(),
         last: Date.now(),
         idleAfter: {{ $idleAfter }},
@@ -21,7 +26,9 @@
         versionUrl: @js($versionUrl),
         init() {
             this.$watch('artOpen', open => { clearTimeout(this.artTimer); if (open) this.artTimer = setTimeout(() => this.artOpen = false, 30000); });
-            this.$watch('ambient', on => { if (on) this.artOpen = false; });
+            this.$watch('ambient', on => { if (on) this.closeOverlays(); });
+            // Switching tabs dismisses whatever lightbox is open.
+            this.$watch('tab', () => this.closeOverlays());
             setInterval(() => {
                 this.now = new Date();
                 const idle = (Date.now() - this.last) / 1000;
@@ -47,6 +54,7 @@
         get drift() { const m = this.now.getMinutes(); return { x: Math.sin(m) * 8, y: Math.cos(m * 1.7) * 8 }; },
     }"
     @background-info.window="art = $event.detail"
+    @open-radar.window="openRadar($event.detail)"
     @pointerdown.window="touch()"
     @keydown.window="touch()"
 >
@@ -93,6 +101,25 @@
                 <p class="mt-4 text-zinc-300" x-show="art?.about" x-text="art?.about"></p>
                 <p class="mt-4 text-[0.8rem] text-zinc-500" x-text="[art?.credit, art?.note].filter(Boolean).join(' · ')"></p>
                 <button type="button" class="mt-5 rounded-xl bg-zinc-800 active:bg-zinc-700" style="min-height: 3rem; padding: 0.75rem 1.5rem;" @click="artOpen = false">Close</button>
+            </div>
+        </div>
+        {{-- NWS radar loop, loaded only when opened (a few hundred KB) and closed after a minute. Sized from the viewport. --}}
+        <div
+            x-show="radar"
+            x-cloak
+            x-transition.opacity
+            class="flex items-center justify-center p-4"
+            style="position: absolute; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.85);"
+            @click="radar = null"
+            @keydown.escape.window="radar = null"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Weather radar"
+        >
+            <div class="text-center" @click.stop>
+                <img :src="radar ? radarSrc : ''" alt="Animated weather radar" referrerpolicy="no-referrer" style="height: min(62dvh, 78vw); width: auto; max-width: 92vw; border-radius: 0.75rem; background: #09090b;">
+                <div class="mt-2 text-[0.75rem] text-zinc-400">Radar: NOAA / National Weather Service</div>
+                <button type="button" class="mt-3 rounded-xl bg-zinc-800 active:bg-zinc-700" style="min-height: 3rem; padding: 0.75rem 1.5rem;" @click="radar = null">Close</button>
             </div>
         </div>
     </main>

@@ -3,10 +3,6 @@
     wire:poll.{{ $refresh }}s
     x-data="{
         now: new Date(),
-        radar: false,
-        radarSrc: '',
-        radarTimer: null,
-        openRadar(url) { this.radarSrc = url + '?t=' + Date.now(); this.radar = true; clearTimeout(this.radarTimer); this.radarTimer = setTimeout(() => this.radar = false, 60000); },
         tz: @js($timezone),
         fmt(o) { return new Intl.DateTimeFormat([], { timeZone: this.tz, ...o }).format(this.now); },
     }"
@@ -37,7 +33,7 @@
             <div class="flex items-center justify-between gap-3">
                 <flux:heading>Weather</flux:heading>
                 @if ($radarUrl && $forecast)
-                    <button type="button" @click="openRadar(@js($radarUrl))" class="rounded-xl text-[0.85rem] text-zinc-300 active:bg-zinc-700" style="min-height: 2.75rem; padding: 0.5rem 1rem; background: rgba(63, 63, 70, 0.5);">Radar</button>
+                    <button type="button" @click="$dispatch('open-radar', @js($radarUrl))" class="rounded-xl text-[0.85rem] text-zinc-300 active:bg-zinc-700" style="min-height: 2.75rem; padding: 0.5rem 1rem; background: rgba(63, 63, 70, 0.5);">Radar</button>
                 @endif
             </div>
             @if (! $weatherConfigured)
@@ -94,17 +90,6 @@
             @endif
         </div>
     </div>
-
-    @if ($radarUrl)
-        {{-- NWS radar loop, loaded only when opened (it is a few hundred KB) and closed after a minute. --}}
-        <div x-show="radar" x-cloak x-transition.opacity class="flex items-center justify-center p-4" style="position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.85);" @click="radar = false" @keydown.escape.window="radar = false" role="dialog" aria-modal="true" aria-label="Weather radar">
-            <div class="text-center" @click.stop>
-                <img :src="radar ? radarSrc : ''" alt="Animated weather radar" referrerpolicy="no-referrer" style="max-width: 100%; max-height: 70vh; border-radius: 0.75rem; background: #09090b;">
-                <div class="mt-2 text-[0.75rem] text-zinc-400">Radar: NOAA / National Weather Service</div>
-                <button type="button" class="mt-3 rounded-xl bg-zinc-800 active:bg-zinc-700" style="min-height: 3rem; padding: 0.75rem 1.5rem;" @click="radar = false">Close</button>
-            </div>
-        </div>
-    @endif
 
     {{-- Tell the shell about today's picture (it shows the corner icon, lightbox and idle box). Re-keyed per picture so a new one re-announces itself. --}}
     <div wire:key="art-{{ md5($background['url'] ?? '') }}" x-data x-init="$dispatch('background-info', @js($background))" hidden></div>
