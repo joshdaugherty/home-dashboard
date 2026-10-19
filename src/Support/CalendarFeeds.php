@@ -245,17 +245,21 @@ class CalendarFeeds
     }
     /**
      * Events bucketed by local date (Y-m-d), all-day first, then by time.
-     * Multi-day events appear on every day they cover.
+     * Multi-day events appear on every day they cover. `only` / `except` filter by category.
      *
      * @return array<string, list<array<string, mixed>>>
      */
-    public function byDay(): array
+    public function byDay(array $only = [], array $except = []): array
     {
         [$windowStart, $windowEnd] = $this->window();
         $windowStart = Carbon::instance($windowStart)->startOfDay();
         $days = [];
 
         foreach ($this->events()['events'] as $event) {
+            if (($only !== [] && ! in_array($event['category'] ?? null, $only, true)) || in_array($event['category'] ?? null, $except, true)) {
+                continue;
+            }
+
             $first = Carbon::parse($event['start'])->startOfDay();
             $end = Carbon::parse($event['end']);
 

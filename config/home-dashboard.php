@@ -49,7 +49,10 @@ return [
     */
     'tabs' => [
         'today' => ['label' => 'Today', 'icon' => 'sun', 'component' => 'home-dashboard.tabs.today'],
-        'calendar' => ['label' => 'Calendar', 'icon' => 'calendar', 'component' => 'home-dashboard.tabs.calendar'],
+        // `params` are passed to the component: `only` / `except` filter by calendar category.
+        'calendar' => ['label' => 'Calendar', 'icon' => 'calendar', 'component' => 'home-dashboard.tabs.calendar', 'params' => ['except' => ['Class Schedule', 'Assignments']]],
+        'classes' => ['label' => 'Class Schedules', 'icon' => 'book', 'component' => 'home-dashboard.tabs.calendar', 'params' => ['only' => ['Class Schedule']]],
+        'assignments' => ['label' => 'Assignments', 'icon' => 'check', 'component' => 'home-dashboard.tabs.calendar', 'params' => ['only' => ['Assignments']]],
         'shopping' => ['label' => 'Shopping', 'icon' => 'cart', 'component' => 'home-dashboard.tabs.shopping'],
     ],
 

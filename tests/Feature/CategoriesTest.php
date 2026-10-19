@@ -71,17 +71,25 @@ class CategoriesTest extends TestCase
         $this->assertSame(['Dinner'], $titles);
     }
 
-    public function test_the_calendar_tab_offers_category_and_person_filters(): void
+    public function test_each_calendar_tab_only_shows_its_categories(): void
     {
         app(Settings::class)->set('people', [['id' => 'josie', 'name' => 'Josie', 'email' => '']]);
-        app(Settings::class)->set('calendars', [$this->feed('a', 'Family', null, 'Personal')]);
-        Http::fake(['cal.example.com/*' => Http::response($this->ics('Dinner'))]);
+        app(Settings::class)->set('calendars', [
+            $this->feed('a', 'Family', null, 'Personal'),
+            $this->feed('b', 'Homework', 'josie', 'Assignments'),
+            $this->feed('c', 'Classes', 'josie', 'Class Schedule'),
+        ]);
+        Http::fake([
+            'cal.example.com/a.ics' => Http::response($this->ics('Dinner')),
+            'cal.example.com/b.ics' => Http::response($this->ics('Essay')),
+            'cal.example.com/c.ics' => Http::response($this->ics('Algebra')),
+        ]);
 
-        Livewire::test(Calendar::class)
-            ->assertSee('Class Schedule')
-            ->assertSee('Assignments')
-            ->assertSee('Shared')
-            ->assertSee('Josie');
+        $tabs = config('home-dashboard.tabs');
+
+        Livewire::test(Calendar::class, $tabs['calendar']['params'])->assertSee('Dinner')->assertDontSee('Essay')->assertDontSee('Algebra')->assertSee('Shared')->assertSee('Josie');
+        Livewire::test(Calendar::class, $tabs['classes']['params'])->assertSee('Algebra')->assertDontSee('Dinner')->assertDontSee('Essay');
+        Livewire::test(Calendar::class, $tabs['assignments']['params'])->assertSee('Essay')->assertDontSee('Dinner')->assertDontSee('Algebra');
     }
 
     public function test_the_settings_page_saves_a_calendars_category(): void
