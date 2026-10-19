@@ -172,7 +172,7 @@ class GroceriesTest extends TestCase
     {
         $this->fakeNotion();
 
-        Livewire::test(Meals::class)->assertSee('Pick one for the week')->assertSee('Pasta')->call('makeToday', 'p-flex');
+        Livewire::test(Meals::class)->assertSee('On hand, not yet scheduled')->assertSee('Pasta')->call('makeToday', 'p-flex');
 
         Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/p-flex') && $r['properties']['Date']['date']['start'] === now('America/Chicago')->toDateString());
 

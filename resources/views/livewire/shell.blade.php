@@ -61,7 +61,7 @@
     @keydown.window="touch()"
 >
     {{-- Daily painting behind every tab (Settings is its own page). It sits under a dark wash so text stays readable, and a failed load leaves the plain background. --}}
-    <style>.hd-has-background main .bg-zinc-900 { background-color: rgba(24, 24, 27, 0.8); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }</style>
+    <style>.hd-card { overflow: hidden; } .hd-card-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.65rem 1rem; background: rgba(9, 9, 11, 0.6); } .hd-has-background main .bg-zinc-900 { background-color: rgba(24, 24, 27, 0.9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }</style>
     <template x-if="art && art.url">
         <div style="position: absolute; inset: 0; z-index: -1; background: #09090b;" aria-hidden="true">
             <img :src="art.url" alt="" referrerpolicy="no-referrer" x-on:error="$el.remove()" style="width: 100%; height: 100%; object-fit: cover;">

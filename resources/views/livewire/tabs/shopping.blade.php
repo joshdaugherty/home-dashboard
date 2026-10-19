@@ -43,12 +43,12 @@
         @endif
 
         @foreach ($groups as $group)
-            <div wire:key="store-{{ $group['name'] }}" class="mb-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                <div class="flex items-baseline justify-between gap-3">
+            <div wire:key="store-{{ $group['name'] }}" class="hd-card mb-4 rounded-2xl border border-zinc-800 bg-zinc-900">
+                <div class="hd-card-head">
                     <flux:heading>{{ $group['name'] }}</flux:heading>
                     <span class="text-[0.85rem] text-zinc-500">{{ count($group['items']) }}</span>
                 </div>
-                <ul class="mt-2" style="display: flex; flex-wrap: wrap; column-gap: 1rem;">
+                <ul class="p-4 pt-2" style="display: flex; flex-wrap: wrap; column-gap: 1rem;">
                     @foreach ($group['items'] as $item)
                         <li wire:key="item-{{ $item['id'] }}" style="display: flex; align-items: center; min-width: 16rem; max-width: 100%;">
                             <button
