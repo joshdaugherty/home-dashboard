@@ -15,6 +15,7 @@ class Settings
     /** Setting key => config key used when nothing has been saved. */
     public const FALLBACKS = [
         'calendars' => 'home-dashboard.calendars',
+        'people' => 'home-dashboard.people',
         'timezone' => 'home-dashboard.timezone',
         'units' => 'home-dashboard.units',
         'latitude' => 'home-dashboard.location.latitude',

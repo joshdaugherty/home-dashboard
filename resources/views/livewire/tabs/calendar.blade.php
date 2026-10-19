@@ -90,7 +90,24 @@
                 </template>
                 <template x-for="(e, i) in agenda" :key="i">
                     <div class="mt-3 flex items-start gap-3">
-                        <span class="mt-[0.45rem] size-3 shrink-0 rounded-full" :style="`background:${e.swatch}`"></span>
+                        <template x-if="e.people && e.people.length">
+                            <div class="flex shrink-0 -space-x-2" :aria-label="e.people.map(p => p.name).join(', ')">
+                                <template x-for="p in e.people.slice(0, 3)" :key="p.id">
+                                    <span class="relative inline-flex size-9 items-center justify-center rounded-full text-[0.9rem] font-semibold text-zinc-900 ring-2 ring-zinc-50 dark:ring-zinc-900" :style="`background:${p.color}`" :title="p.name">
+                                        <span x-text="p.initial"></span>
+                                        <template x-if="p.avatar">
+                                            <img :src="p.avatar" alt="" loading="lazy" referrerpolicy="no-referrer" x-on:error="$el.remove()" class="absolute inset-0 size-full rounded-full object-cover">
+                                        </template>
+                                    </span>
+                                </template>
+                                <template x-if="e.people.length > 3">
+                                    <span class="relative inline-flex size-9 items-center justify-center rounded-full bg-zinc-700 text-[0.8rem] font-semibold text-zinc-100 ring-2 ring-zinc-900" x-text="`+${e.people.length - 3}`"></span>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!(e.people && e.people.length)">
+                            <span class="mt-[0.45rem] size-3 shrink-0 rounded-full" :style="`background:${e.swatch}`"></span>
+                        </template>
                         <div class="min-w-0">
                             <div x-text="e.title"></div>
                             <div class="text-[0.85rem] text-zinc-400">

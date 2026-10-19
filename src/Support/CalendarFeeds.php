@@ -100,6 +100,7 @@ class CalendarFeeds
                 'name' => (string) ($item['name'] ?? 'Calendar '.($i + 1)),
                 'color' => self::PALETTE[$color] ?? (preg_match('/^#[0-9a-f]{3,8}$/i', $color) ? $color : $colors[$i % count($colors)]),
                 'url' => self::normalizeUrl($url),
+                'person' => is_array($item) && ($item['person'] ?? '') !== '' ? (string) $item['person'] : null,
             ];
         }
 
@@ -161,10 +162,21 @@ class CalendarFeeds
                 continue;
             }
 
-            array_push($events, ...$list);
+            // Name, color and person come from the current settings, not the cached copy,
+            // so edits on the settings page show up straight away.
+            foreach ($list as $event) {
+                $events[] = array_merge($event, ['calendar' => $feed['name'], 'color' => $feed['color'], 'person' => $feed['person'] ?? null]);
+            }
         }
 
         $events = self::mergeDuplicates($events);
+
+        $people = app(People::class);
+
+        foreach ($events as &$event) {
+            $event['people'] = $people->resolve($event['person_colors']);
+        }
+        unset($event);
 
         usort($events, fn ($a, $b) => [$a['start'], $a['title']] <=> [$b['start'], $b['title']]);
 
@@ -186,7 +198,11 @@ class CalendarFeeds
             $key = mb_strtolower(trim($event['title'])).'|'.$event['start'].'|'.$event['end'].'|'.(int) $event['all_day'];
 
             if (! isset($merged[$key])) {
-                $merged[$key] = $event + ['calendars' => [], 'colors' => []];
+                $merged[$key] = $event + ['calendars' => [], 'colors' => [], 'person_colors' => []];
+            }
+
+            if (($event['person'] ?? null) !== null) {
+                $merged[$key]['person_colors'][$event['person']] ??= $event['color'];
             }
 
             if (! in_array($event['calendar'], $merged[$key]['calendars'], true)) {
@@ -244,6 +260,7 @@ class CalendarFeeds
                     'calendars' => $event['calendars'],
                     'color' => $event['color'],
                     'swatch' => $event['swatch'],
+                    'people' => $event['people'] ?? [],
                     'location' => $event['location'],
                     'all_day' => $event['all_day'],
                     'time' => $event['all_day'] ? 'All day' : ($isFirst ? Carbon::parse($event['start'])->format('g:i A') : 'Continues'),

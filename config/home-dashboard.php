@@ -74,6 +74,8 @@ return [
         'longitude' => env('DASHBOARD_LONGITUDE'),
     ],
     'calendars' => env('DASHBOARD_CALENDARS'),
+    // The household, for avatars: [{"name":"Josh","email":"josh@example.com"}]. Calendars refer to a person by "person".
+    'people' => env('DASHBOARD_PEOPLE'),
     'cache' => [
         'weather' => 600,  // seconds
         'calendar' => 600,

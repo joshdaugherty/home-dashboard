@@ -13,6 +13,30 @@
         @endif
 
         <form wire:submit="save" class="space-y-10">
+            {{-- People --}}
+            <section class="space-y-4">
+                <div>
+                    <flux:heading size="lg">People</flux:heading>
+                    <flux:text class="mt-1">Events on a person's calendar show their picture. Pictures come from Gravatar using the email address; without one, their initial is shown. Only a hash of the address reaches the display.</flux:text>
+                </div>
+
+                @foreach ($people as $i => $person)
+                    <div class="flex flex-wrap items-end gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 p-4" wire:key="person-{{ $person['id'] }}">
+                        <div class="min-w-40 flex-1">
+                            <flux:input wire:model="people.{{ $i }}.name" label="Name" />
+                            @error("people.{$i}.name") <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="min-w-56 flex-[2]">
+                            <flux:input wire:model="people.{{ $i }}.email" type="email" label="Gravatar email" autocomplete="off" />
+                            @error("people.{$i}.email") <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
+                        </div>
+                        <flux:button type="button" wire:click="removePerson({{ $i }})" variant="danger" class="min-h-12">Remove</flux:button>
+                    </div>
+                @endforeach
+
+                <flux:button type="button" wire:click="addPerson" class="min-h-12">Add a person</flux:button>
+            </section>
+
             {{-- Calendars --}}
             <section class="space-y-4">
                 <div>
@@ -43,6 +67,15 @@
                                 </div>
                             </div>
                         </div>
+
+                        @if ($people)
+                            <flux:select wire:model="feeds.{{ $i }}.person" label="Whose calendar">
+                                <flux:select.option value="">Nobody in particular</flux:select.option>
+                                @foreach ($people as $person)
+                                    <flux:select.option value="{{ $person['id'] }}">{{ $person['name'] ?: 'Unnamed' }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                        @endif
 
                         <div>
                             <flux:input

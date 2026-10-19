@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use JoshDaugherty\HomeDashboard\Support\CalendarFeeds;
+use JoshDaugherty\HomeDashboard\Support\People;
 use JoshDaugherty\HomeDashboard\Support\Settings;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -22,8 +23,11 @@ use Throwable;
 #[Layout('home-dashboard::layouts.kiosk')]
 class SettingsPage extends Component
 {
-    /** @var list<array{id: string, name: string, color: string, url: string, saved: bool}> */
+    /** @var list<array{id: string, name: string, color: string, url: string, saved: bool, person: string}> */
     public array $feeds = [];
+
+    /** @var list<array{id: string, name: string, email: string}> */
+    public array $people = [];
 
     public string $latitude = '';
 
@@ -62,7 +66,27 @@ class SettingsPage extends Component
             'color' => $colors[count($this->feeds) % count($colors)],
             'url' => '',
             'saved' => false,
+            'person' => '',
         ];
+    }
+
+    public function addPerson(): void
+    {
+        $this->people[] = ['id' => (string) Str::uuid(), 'name' => '', 'email' => ''];
+    }
+
+    public function removePerson(int $index): void
+    {
+        $id = $this->people[$index]['id'] ?? null;
+
+        unset($this->people[$index]);
+        $this->people = array_values($this->people);
+
+        foreach ($this->feeds as $i => $feed) {
+            if ($feed['person'] === $id) {
+                $this->feeds[$i]['person'] = '';
+            }
+        }
     }
 
     public function removeFeed(int $index): void
@@ -158,6 +182,9 @@ class SettingsPage extends Component
         $this->validate([
             'feeds.*.name' => ['required', 'string', 'max:60'],
             'feeds.*.color' => ['required', 'string', 'regex:/^(#[0-9a-fA-F]{3,8}|'.implode('|', array_keys(CalendarFeeds::PALETTE)).')$/'],
+            'people.*.name' => ['required', 'string', 'max:60'],
+            'people.*.email' => ['nullable', 'email', 'max:190'],
+            'feeds.*.person' => ['nullable', 'string'],
             'feeds.*.url' => ['nullable', 'string', 'max:2000', 'regex:#^(https?|webcal)://[^\s]+$#i'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
@@ -180,10 +207,11 @@ class SettingsPage extends Component
                 return;
             }
 
-            $list[] = ['id' => $feed['id'], 'name' => trim($feed['name']), 'color' => $feed['color'], 'url' => $url];
+            $list[] = ['id' => $feed['id'], 'name' => trim($feed['name']), 'color' => $feed['color'], 'url' => $url, 'person' => in_array($feed['person'], array_column($this->people, 'id'), true) ? $feed['person'] : null];
         }
 
         $settings->set('calendars', $list);
+        $settings->set('people', array_map(fn (array $p) => ['id' => $p['id'], 'name' => trim($p['name']), 'email' => strtolower(trim($p['email']))], $this->people));
         $settings->set('timezone', $this->timezone);
         $settings->set('units', $this->units);
 
@@ -226,7 +254,10 @@ class SettingsPage extends Component
             'color' => array_search($feed['color'], CalendarFeeds::PALETTE, true) ?: $feed['color'],
             'url' => '',
             'saved' => true,
+            'person' => $feed['person'] ?? '',
         ], app(CalendarFeeds::class)->feeds()['feeds']);
+
+        $this->people = array_map(fn (array $p) => ['id' => $p['id'], 'name' => $p['name'], 'email' => $p['email'] ?? ''], app(People::class)->all());
 
         $this->latitude = (string) ($settings->get('latitude') ?? '');
         $this->longitude = (string) ($settings->get('longitude') ?? '');

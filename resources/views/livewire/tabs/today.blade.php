@@ -48,7 +48,7 @@
             @else
                 @forelse ($upcoming as $event)
                     <div class="mt-3 flex items-start gap-3">
-                        <span class="mt-[0.45rem] size-3 shrink-0 rounded-full" style="background: {{ $event['swatch'] }}"></span>
+                        <x-home-dashboard::avatars :people="$event['people']" :swatch="$event['swatch']" />
                         <div class="min-w-0">
                             <div class="truncate">{{ $event['title'] }}</div>
                             <div class="text-[0.85rem] text-zinc-400">{{ $event['day'] }} · {{ $event['time'] }}@if ($event['location']) · {{ $event['location'] }}@endif</div>
