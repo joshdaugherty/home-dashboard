@@ -5,6 +5,7 @@ namespace JoshDaugherty\HomeDashboard\Tests\Feature;
 use Illuminate\Support\Facades\Http;
 use JoshDaugherty\HomeDashboard\Livewire\SettingsPage;
 use JoshDaugherty\HomeDashboard\Livewire\Tabs\Today;
+use JoshDaugherty\HomeDashboard\Support\CalendarFeeds;
 use JoshDaugherty\HomeDashboard\Support\People;
 use JoshDaugherty\HomeDashboard\Support\Settings;
 use JoshDaugherty\HomeDashboard\Tests\TestCase;
@@ -141,4 +142,30 @@ class PeopleTest extends TestCase
         $calendar = app(Settings::class)->get('calendars')[0];
         $this->assertNull($calendar['person']);
         $this->assertSame('https://calendar.example.com/x/basic.ics', $calendar['url']);
+    }
+    public function test_a_calendar_takes_its_persons_color_unless_it_has_no_person(): void
+    {
+        app(Settings::class)->set('people', [['id' => 'josh', 'name' => 'Josh', 'email' => '', 'color' => 'rose']]);
+        app(Settings::class)->set('calendars', [
+            ['id' => 'a', 'name' => 'Josh', 'color' => 'sky', 'url' => 'https://cal.example.com/a.ics', 'person' => 'josh'],
+            ['id' => 'b', 'name' => 'Family', 'color' => 'amber', 'url' => 'https://cal.example.com/b.ics', 'person' => null],
+        ]);
+
+        $feeds = app(CalendarFeeds::class)->feeds()['feeds'];
+
+        $this->assertSame(CalendarFeeds::PALETTE['rose'], $feeds[0]['color']);
+        $this->assertSame(CalendarFeeds::PALETTE['amber'], $feeds[1]['color']);
+    }
+
+    public function test_the_calendar_color_picker_only_shows_without_a_person(): void
+    {
+        app(Settings::class)->set('people', [['id' => 'josh', 'name' => 'Josh', 'email' => '', 'color' => 'rose']]);
+        app(Settings::class)->set('calendars', [
+            ['id' => 'a', 'name' => 'Mine', 'color' => 'sky', 'url' => 'https://cal.example.com/a.ics', 'person' => 'josh'],
+        ]);
+
+        Livewire::test(SettingsPage::class, ['section' => 'calendars'])
+            ->assertDontSee('feeds.0.color', false)
+            ->set('feeds.0.person', '')
+            ->assertSee('feeds.0.color', false);
     }}

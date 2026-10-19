@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 class People
 {
     /**
-     * @return list<array{id: string, name: string, email: string|null}>
+     * @return list<array{id: string, name: string, email: string|null, color: string, hex: string}>
      */
     public function all(): array
     {
@@ -37,7 +37,13 @@ class People
 
             $email = strtolower(trim((string) ($item['email'] ?? '')));
 
+            $palette = array_keys(CalendarFeeds::PALETTE);
+            $color = (string) ($item['color'] ?? '');
+            $color = isset(CalendarFeeds::PALETTE[$color]) || preg_match('/^#[0-9a-f]{3,8}$/i', $color) ? $color : $palette[count($people) % count($palette)];
+
             $people[] = [
+                'color' => $color,
+                'hex' => CalendarFeeds::PALETTE[$color] ?? $color,
                 'id' => (string) ($item['id'] ?? (Str::slug($name) ?: 'p'.$i)),
                 'name' => $name,
                 'email' => filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null,

@@ -87,6 +87,7 @@ class CalendarFeeds
 
         $feeds = [];
         $colors = array_values(self::PALETTE);
+        $known = collect(app(People::class)->all())->keyBy('id');
 
         foreach (array_values($raw ?? []) as $i => $item) {
             $url = is_array($item) ? trim((string) ($item['url'] ?? '')) : null;
@@ -101,12 +102,16 @@ class CalendarFeeds
                 return ['feeds' => [], 'error' => 'Calendar '.($i + 1).' needs an http(s) or webcal url.'];
             }
             $color = (string) ($item['color'] ?? '');
+            $person = is_array($item) && ($item['person'] ?? '') !== '' ? (string) $item['person'] : null;
             $feeds[] = [
                 'id' => is_array($item) && isset($item['id']) ? (string) $item['id'] : 'f'.$i,
                 'name' => (string) ($item['name'] ?? 'Calendar '.($i + 1)),
-                'color' => self::PALETTE[$color] ?? (preg_match('/^#[0-9a-f]{3,8}$/i', $color) ? $color : $colors[$i % count($colors)]),
+                // A person's calendars all share that person's color; only unassigned ones use their own.
+                'color' => $person !== null && $known->has($person)
+                    ? $known[$person]['hex']
+                    : (self::PALETTE[$color] ?? (preg_match('/^#[0-9a-f]{3,8}$/i', $color) ? $color : $colors[$i % count($colors)])),
                 'url' => self::normalizeUrl($url),
-                'person' => is_array($item) && ($item['person'] ?? '') !== '' ? (string) $item['person'] : null,
+                'person' => $person,
                 'category' => in_array($item['category'] ?? null, self::categories(), true) ? $item['category'] : (self::categories()[0] ?? 'Personal'),
             ];
         }

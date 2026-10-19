@@ -33,6 +33,21 @@
                             <flux:input wire:model="people.{{ $i }}.email" type="email" label="Gravatar email" autocomplete="off" />
                             @error("people.{$i}.email") <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
                         </div>
+                        <div>
+                            <flux:text class="mb-1 text-sm font-medium">Color</flux:text>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach ($palette as $name => $hex)
+                                    <button
+                                        type="button"
+                                        wire:click="$set('people.{{ $i }}.color', '{{ $name }}')"
+                                        class="size-12 rounded-full border-2 {{ $person['color'] === $name ? 'border-zinc-900 dark:border-white' : 'border-transparent' }}"
+                                        style="background-color: {{ $hex }}"
+                                        aria-label="{{ ucfirst($name) }}"
+                                        aria-pressed="{{ $person['color'] === $name ? 'true' : 'false' }}"
+                                    ></button>
+                                @endforeach
+                            </div>
+                        </div>
                         <flux:button type="button" wire:click="removePerson({{ $i }})" variant="danger" class="min-h-12">Remove</flux:button>
                     </div>
                 @endforeach
@@ -58,6 +73,7 @@
                                 <flux:input wire:model="feeds.{{ $i }}.name" label="Name" placeholder="Family" />
                                 @error("feeds.{$i}.name") <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
                             </div>
+                            @if ($feed['person'] === '' || ! collect($people)->contains('id', $feed['person']))
                             <div>
                                 <flux:text class="mb-1 text-sm font-medium">Color</flux:text>
                                 <div class="flex flex-wrap gap-2">
@@ -73,6 +89,7 @@
                                     @endforeach
                                 </div>
                             </div>
+                            @endif
                         </div>
 
                         <flux:select wire:model="feeds.{{ $i }}.category" label="Category">
@@ -82,7 +99,7 @@
                         </flux:select>
 
                         @if ($people)
-                            <flux:select wire:model="feeds.{{ $i }}.person" label="Whose calendar">
+                            <flux:select wire:model.live="feeds.{{ $i }}.person" label="Whose calendar" :description="$feed['person'] !== '' ? 'This calendar uses the person\'s color.' : null">
                                 <flux:select.option value="">Nobody in particular</flux:select.option>
                                 @foreach ($people as $person)
                                     <flux:select.option value="{{ $person['id'] }}">{{ $person['name'] ?: 'Unnamed' }}</flux:select.option>

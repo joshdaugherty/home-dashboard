@@ -77,7 +77,9 @@ class SettingsPage extends Component
 
     public function addPerson(): void
     {
-        $this->people[] = ['id' => (string) Str::uuid(), 'name' => '', 'email' => ''];
+        $colors = array_keys(CalendarFeeds::PALETTE);
+
+        $this->people[] = ['id' => (string) Str::uuid(), 'name' => '', 'email' => '', 'color' => $colors[count($this->people) % count($colors)]];
     }
 
     public function removePerson(int $index): void
@@ -188,6 +190,7 @@ class SettingsPage extends Component
             'people' => [
                 'people.*.name' => ['required', 'string', 'max:60'],
                 'people.*.email' => ['nullable', 'email', 'max:190'],
+                'people.*.color' => ['required', 'string', 'regex:/^(#[0-9a-fA-F]{3,8}|'.implode('|', array_keys(CalendarFeeds::PALETTE)).')$/'],
             ],
             'calendars' => [
                 'feeds.*.name' => ['required', 'string', 'max:60'],
@@ -231,7 +234,7 @@ class SettingsPage extends Component
         }
 
         if (in_array('people', $parts, true)) {
-            $settings->set('people', array_map(fn (array $p) => ['id' => $p['id'], 'name' => trim($p['name']), 'email' => strtolower(trim($p['email']))], $this->people));
+            $settings->set('people', array_map(fn (array $p) => ['id' => $p['id'], 'name' => trim($p['name']), 'email' => strtolower(trim($p['email'])), 'color' => $p['color']], $this->people));
 
             // Saving people alone must not leave calendars pointing at someone who was removed.
             if (! in_array('calendars', $parts, true) && $settings->isSaved('calendars')) {
@@ -291,7 +294,7 @@ class SettingsPage extends Component
             'category' => $feed['category'],
         ], app(CalendarFeeds::class)->feeds()['feeds']);
 
-        $this->people = array_map(fn (array $p) => ['id' => $p['id'], 'name' => $p['name'], 'email' => $p['email'] ?? ''], app(People::class)->all());
+        $this->people = array_map(fn (array $p) => ['id' => $p['id'], 'name' => $p['name'], 'email' => $p['email'] ?? '', 'color' => $p['color']], app(People::class)->all());
 
         $this->latitude = (string) ($settings->get('latitude') ?? '');
         $this->longitude = (string) ($settings->get('longitude') ?? '');
