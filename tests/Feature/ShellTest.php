@@ -52,4 +52,9 @@ class ShellTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'image/png');
     }
+
+    public function test_today_has_a_button_to_start_the_idle_screen(): void
+    {
+        $this->get('/')->assertOk()->assertSee('aria-label="Idle screen"', false)->assertSee('ambient = true', false);
+    }
 }

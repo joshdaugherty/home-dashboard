@@ -70,19 +70,29 @@
                 @livewire($tab['component'], array_merge(['lazy' => 'on-load'], $tab['params'] ?? []), key('pane-'.$key))
             </section>
         @endforeach
-        {{-- About today's background picture: a quiet corner icon that opens a lightbox. --}}
-        <button
-            type="button"
-            x-show="art && tab === 'today' && !ambient"
-            x-cloak
-            @click="artOpen = true"
-            aria-label="About this picture"
-            class="flex items-center justify-center rounded-full text-zinc-300 active:bg-zinc-700"
-            style="position: absolute; top: 0.75rem; right: 0.75rem; width: 3rem; height: 3rem; z-index: 5; background: rgba(24, 24, 27, 0.55);"
-        >
-            <x-home-dashboard::icon name="info" class="size-6" />
-        </button>
-
+        {{-- Corner buttons on Today: go to the idle screen now, and read about the background picture. --}}
+        <div x-show="tab === 'today' && !ambient" x-cloak class="flex" style="position: absolute; top: 0.75rem; right: 0.75rem; z-index: 5; gap: 0.5rem;">
+            <button
+                type="button"
+                @click="ambient = true"
+                aria-label="Idle screen"
+                class="flex items-center justify-center rounded-full text-zinc-300 active:bg-zinc-700"
+                style="width: 3rem; height: 3rem; background: rgba(24, 24, 27, 0.55);"
+            >
+                <x-home-dashboard::icon name="moon" class="size-6" />
+            </button>
+            <button
+                type="button"
+                x-show="art"
+                x-cloak
+                @click="artOpen = true"
+                aria-label="About this picture"
+                class="flex items-center justify-center rounded-full text-zinc-300 active:bg-zinc-700"
+                style="width: 3rem; height: 3rem; background: rgba(24, 24, 27, 0.55);"
+            >
+                <x-home-dashboard::icon name="info" class="size-6" />
+            </button>
+        </div>
         <div
             x-show="artOpen && art"
             x-cloak
