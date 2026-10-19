@@ -2,6 +2,7 @@
 
 namespace JoshDaugherty\HomeDashboard\Livewire;
 
+use JoshDaugherty\HomeDashboard\Support\Version;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -19,6 +20,9 @@ class Shell extends Component
             'homeTab' => config('home-dashboard.home_tab', 'today'),
             'idleAfter' => (int) config('home-dashboard.idle_return_after', 60),
             'ambientAfter' => (int) config('home-dashboard.ambient_after', 120),
+            'version' => Version::current(),
+            'versionUrl' => route('home-dashboard.version'),
+            'versionEvery' => (int) config('home-dashboard.version_check_every', 120),
         ]);
     }
 }

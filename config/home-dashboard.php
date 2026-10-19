@@ -29,6 +29,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Auto-reload after a deploy
+    |--------------------------------------------------------------------------
+    | The shell asks /version every `version_check_every` seconds (0 disables) and
+    | reloads itself, only while idle, when the answer changes. The default version
+    | is derived from the built assets, composer.lock and bootstrap/app.php; set
+    | DASHBOARD_VERSION to any string to control it yourself.
+    */
+    'version' => env('DASHBOARD_VERSION'),
+    'version_check_every' => (int) env('DASHBOARD_VERSION_CHECK', 120),
+
+    /*
+    |--------------------------------------------------------------------------
     | Tabs
     |--------------------------------------------------------------------------
     | Order = display order. `component` is a Livewire component name; point any

@@ -13,6 +13,8 @@
         last: Date.now(),
         idleAfter: {{ $idleAfter }},
         ambientAfter: {{ $ambientAfter }},
+        version: @js($version),
+        versionUrl: @js($versionUrl),
         init() {
             setInterval(() => {
                 this.now = new Date();
@@ -20,6 +22,20 @@
                 if (this.ambientAfter > 0 && idle >= this.ambientAfter) this.ambient = true;
                 if (this.idleAfter > 0 && idle >= this.idleAfter) this.tab = this.home;
             }, 1000);
+
+            @if ($versionEvery > 0)
+                setInterval(() => this.checkVersion(), {{ $versionEvery * 1000 }});
+            @endif
+        },
+        // Reload after a deploy, but never mid-touch: only when the frame has been left alone.
+        async checkVersion() {
+            if ((Date.now() - this.last) / 1000 < 30) return;
+            try {
+                const res = await fetch(this.versionUrl, { cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } });
+                if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return;
+                const { version } = await res.json();
+                if (version && version !== this.version) location.reload();
+            } catch (e) { /* offline or mid-deploy: try again next tick */ }
         },
         touch() { this.last = Date.now(); this.ambient = false; },
         get drift() { const m = this.now.getMinutes(); return { x: Math.sin(m) * 8, y: Math.cos(m * 1.7) * 8 }; },
