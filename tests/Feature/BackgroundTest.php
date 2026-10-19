@@ -23,7 +23,7 @@ class BackgroundTest extends TestCase
 
     private function work(int $id, int $w, int $h, ?string $image = 'img'): array
     {
-        return ['id' => $id, 'title' => "Work {$id}", 'artist_display' => "Artist {$id}\nFrench, 1840", 'image_id' => $image ? $image.$id : null, 'thumbnail' => ['width' => $w, 'height' => $h]];
+        return ['id' => $id, 'title' => "Work {$id}", 'artist_display' => "Artist {$id}\nFrench, 1840", 'image_id' => $image ? $image.$id : null, 'thumbnail' => ['width' => $w, 'height' => $h], 'date_display' => '1884', 'short_description' => '<p>A calm <em>river</em> at dusk. More text follows here.</p>'];
     }
 
     private function fakeMuseum(array $works): void
@@ -70,7 +70,7 @@ class BackgroundTest extends TestCase
         Http::fake(['api.artic.edu/*' => Http::response('nope', 500)]);
         $this->assertNull(app(Background::class)->current(CarbonImmutable::parse('2026-10-20 09:00')));
         $this->assertNull(app(Background::class)->current(CarbonImmutable::parse('2026-10-20 09:00')));
-        $this->assertTrue(Cache::has('home-dashboard:background:v2:2026-10-20-9:failed'));
+        $this->assertTrue(Cache::has('home-dashboard:background:v3:2026-10-20-9:failed'));
     }
 
     public function test_it_can_be_turned_off_without_any_request(): void
@@ -146,10 +146,36 @@ class BackgroundTest extends TestCase
     public function test_a_stale_cache_entry_from_an_older_release_is_replaced(): void
     {
         $this->fakeMuseum([$this->work(4, 4000, 2500)]);
-        Cache::put('home-dashboard:background:v2:2026-10-19-9', ['url' => 'x', 'title' => 'Old', 'artist' => 'A', 'link' => 'l'], 3600);
+        Cache::put('home-dashboard:background:v3:2026-10-19-9', ['url' => 'x', 'title' => 'Old', 'artist' => 'A', 'link' => 'l'], 3600);
 
         $art = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00'));
 
         $this->assertSame('Work 4', $art['title']);
         $this->assertArrayHasKey('credit', $art);
+    }
+    public function test_the_caption_carries_the_date_and_a_short_description_with_attribution(): void
+    {
+        $this->fakeMuseum([$this->work(5, 4000, 2500)]);
+
+        $art = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00'));
+
+        $this->assertSame('1884', $art['date']);
+        $this->assertSame('A calm river at dusk. More text follows here.', $art['about']);
+        $this->assertStringContainsString('CC BY 4.0', $art['note']);
+
+        // The Today pane only announces the picture; the shell renders the icon, lightbox and idle box.
+        Livewire::test(Today::class)->assertSee('background-info', false)->assertSee('A calm river at dusk.', false)->assertSee('1884', false)->assertSee('CC BY 4.0', false);
+
+        $this->get('/')->assertSee('About this picture')->assertSee('background-info', false);
+    }
+
+    public function test_long_descriptions_are_cut_at_a_sentence(): void
+    {
+        config(['home-dashboard.background.nasa_key' => 'k']);
+        Http::fake(['api.nasa.gov/*' => Http::response(['media_type' => 'image', 'url' => 'https://x/y.jpg', 'title' => 'T', 'date' => '2026-10-19', 'explanation' => str_repeat('A sentence about a galaxy. ', 30)])]);
+
+        $art = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 11:00'));
+
+        $this->assertLessThanOrEqual(320, mb_strlen($art['about']));
+        $this->assertStringEndsWith('.', $art['about']);
     }}

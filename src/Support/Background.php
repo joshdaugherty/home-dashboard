@@ -8,19 +8,21 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * A new picture every hour for the Today tab: a public-domain painting from the Art Institute of Chicago each day, for the
- * Today tab. The search is an allow-list (paintings of landscapes, seascapes, flowers and
- * animals, minus anything flagged nudity, death, violence or war), so no open search ever
- * reaches the frame. When a NASA API key is configured, NASA's Astronomy Picture of the Day
- * (images only, never copyrighted ones) takes every other hour (it is one picture per day). The keys stay on the server:
- * the browser only gets an image URL, loads it directly, and drops back to the plain
- * background if that fails.
+ * A new picture every hour for the Today tab: a public-domain painting from the Art Institute of
+ * Chicago. The search is a strict allow-list (landscapes and seascapes only, with any figures and
+ * anything hinting at nudity, death, violence or war excluded), so no open search ever reaches the
+ * frame. When a NASA API key is configured, NASA's Astronomy Picture of the Day (images only, never
+ * copyrighted ones) takes every other hour; it is one picture per day. The keys stay on the server:
+ * the browser only gets an image URL, loads it directly, and drops back to the plain background if
+ * that fails.
  */
 class Background
 {
     private const API = 'https://api.artic.edu/api/v1/artworks/search';
 
     private const PAGE = 10;
+
+    private const BLOCKED = 'nude nudity naked nudes bather bathers bathing bath bathe venus diana odalisque erotic sensual death dead dying violence wounded war battle crucifixion skull massacre execution martyrdom hell women woman girl girls figure figures men man boy children child portrait mythology bacchus nymph nymphs sleeping';
 
     public function enabled(): bool
     {
@@ -42,7 +44,7 @@ class Background
         // changes every hour, while NASA's picture is the same all day by nature.
         $date = $now->toDateString();
         $hour = (int) $now->format('G');
-        $key = 'home-dashboard:background:v2:'.$date.'-'.$hour;
+        $key = 'home-dashboard:background:v3:'.$date.'-'.$hour;
 
         if (Cache::has($key.':failed')) {
             return null;
@@ -97,6 +99,21 @@ class Background
         return null;
     }
 
+    /** Plain text, cut at a sentence end where possible, short enough for a small caption. */
+    private static function tidy(string $text, int $max = 320): string
+    {
+        $text = trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($text))));
+
+        if (mb_strlen($text) <= $max) {
+            return $text;
+        }
+
+        $cut = mb_substr($text, 0, $max);
+        $end = max(mb_strrpos($cut, '. '), mb_strrpos($cut, '? '), mb_strrpos($cut, '! '));
+
+        return $end !== false && $end > $max / 2 ? mb_substr($cut, 0, $end + 1) : rtrim($cut, ' ,;:').'…';
+    }
+
     private function nasaKey(): string
     {
         return trim((string) config('home-dashboard.background.nasa_key', ''));
@@ -106,7 +123,7 @@ class Background
     private function apod(string $date): ?array
     {
         // One picture per day, so ask NASA once a day however often the slot changes.
-        $data = Cache::remember('home-dashboard:apod:v2:'.$date, now()->addDay(), fn () => Http::timeout(8)
+        $data = Cache::remember('home-dashboard:apod:v3:'.$date, now()->addDay(), fn () => Http::timeout(8)
             ->get('https://api.nasa.gov/planetary/apod', ['api_key' => $this->nasaKey(), 'date' => $date])
             ->throw()
             ->json());
@@ -120,6 +137,9 @@ class Background
             'url' => (string) $data['url'],
             'title' => (string) ($data['title'] ?? 'Astronomy Picture of the Day'),
             'artist' => 'NASA',
+            'date' => (string) ($data['date'] ?? ''),
+            'about' => self::tidy($data['explanation'] ?? ''),
+            'note' => '',
             'credit' => 'NASA Astronomy Picture of the Day, public domain',
         ];
     }
@@ -153,7 +173,11 @@ class Background
                     'url' => 'https://www.artic.edu/iiif/2/'.$work['image_id'].'/full/1686,/0/default.jpg',
                     'title' => (string) $work['title'],
                     'artist' => trim(strtok((string) ($work['artist_display'] ?? ''), "\n")) ?: 'Unknown artist',
+                    'date' => (string) ($work['date_display'] ?? ''),
+                    'about' => self::tidy($work['short_description'] ?? ''),
                     'credit' => 'Art Institute of Chicago, public domain',
+                    // The museum publishes its descriptions under CC BY 4.0, which asks for a credit.
+                    'note' => ! empty($work['short_description']) ? 'Description: Art Institute of Chicago, CC BY 4.0' : '',
                 ];
             }
         }
@@ -175,15 +199,16 @@ class Background
                         ['exists' => ['field' => 'image_id']],
                         $match('classification_titles', 'painting'),
                     ],
-                    'should' => array_map(fn ($subject) => $match('subject_titles', $subject), ['landscapes', 'seascapes', 'flowers', 'animals']),
+                    'should' => array_map(fn ($subject) => $match('subject_titles', $subject), ['landscapes', 'seascapes']),
                     'minimum_should_match' => 1,
-                    'must_not' => [
-                        ...array_map(fn ($subject) => $match('subject_titles', $subject), ['nudity', 'nude', 'death', 'violence', 'war', 'crucifixion']),
-                        $match('title', 'nude'),
-                    ],
+                    // Strict on purpose: no figures at all, and anything that hints at nudity or violence is out.
+                    'must_not' => [['multi_match' => [
+                        'query' => self::BLOCKED,
+                        'fields' => ['title', 'subject_titles', 'term_titles', 'short_description', 'description', 'alt_titles'],
+                    ]]],
                 ]],
                 'sort' => [['id' => 'asc']],
-                'fields' => ['id', 'title', 'artist_display', 'image_id', 'thumbnail'],
+                'fields' => ['id', 'title', 'artist_display', 'image_id', 'thumbnail', 'date_display', 'short_description'],
             ])
             ->throw()
             ->json();

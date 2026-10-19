@@ -1,5 +1,5 @@
 <div
-    class="relative isolate flex h-full flex-col justify-between gap-6"
+    class="flex h-full flex-col justify-between gap-6" style="position: relative; isolation: isolate;"
     wire:poll.{{ $refresh }}s
     x-data="{
         now: new Date(),
@@ -10,9 +10,9 @@
 >
     @if ($background)
         {{-- Daily painting behind everything. It sits under a dark wash so text stays readable, and a failed load leaves the plain background. --}}
-        <div class="fixed inset-0 -z-10 bg-zinc-950" aria-hidden="true">
-            <img src="{{ $background['url'] }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()" class="size-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-b from-zinc-950/70 via-zinc-950/50 to-zinc-950/80"></div>
+        <div style="position: fixed; inset: 0; z-index: -1; background: #09090b;" aria-hidden="true">
+            <img src="{{ $background['url'] }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(9,9,11,.78), rgba(9,9,11,.62) 50%, rgba(9,9,11,.86));"></div>
         </div>
     @endif
     <div>
@@ -22,7 +22,7 @@
 
     {{-- 1 column when narrow, 2 when wide. --}}
     <div class="grid min-h-0 grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
-        <div class="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900 p-4" @if ($background) style="background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);" @endif>
             <flux:heading>Weather</flux:heading>
             @if (! $weatherConfigured)
                 <flux:text class="mt-1">Set DASHBOARD_LATITUDE and DASHBOARD_LONGITUDE.</flux:text>
@@ -48,7 +48,7 @@
             @endif
         </div>
 
-        <div class="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900 p-4" @if ($background) style="background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);" @endif>
             <flux:heading>Up next</flux:heading>
             @if ($calendarError)
                 <flux:text class="mt-1">{{ $calendarError }}</flux:text>
@@ -71,9 +71,6 @@
         </div>
     </div>
 
-    @if ($background)
-        <div class="text-[0.75rem] text-zinc-400">
-            <span class="italic">{{ $background['title'] }}</span>, {{ $background['artist'] }} · {{ $background['credit'] ?? '' }}
-        </div>
-    @endif
+    {{-- Tell the shell about today's picture (it shows the corner icon, lightbox and idle box). Re-keyed per picture so a new one re-announces itself. --}}
+    <div wire:key="art-{{ md5($background['url'] ?? '') }}" x-data x-init="$dispatch('background-info', @js($background))" hidden></div>
 </div>
