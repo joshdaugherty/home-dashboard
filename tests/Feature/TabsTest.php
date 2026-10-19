@@ -32,6 +32,8 @@ class TabsTest extends TestCase
         $this->travelTo(Carbon::parse('2026-10-19 12:00', 'America/Chicago'));
 
         Http::fake([
+            'api.weather.gov/points/*' => Http::response(['properties' => ['radarStation' => 'KLZK']]),
+            'api.weather.gov/alerts/*' => Http::response(['features' => []]),
             'api.open-meteo.com/*' => Http::response([
                 'current' => ['temperature_2m' => 61.6, 'apparent_temperature' => 58.2, 'weather_code' => 2, 'is_day' => 1],
                 'daily' => [

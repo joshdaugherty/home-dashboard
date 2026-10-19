@@ -66,6 +66,87 @@ class Weather
     }
 
     /**
+     * Active National Weather Service alerts for the location (US only), most severe first.
+     * Empty when there are none, outside the US, or when the lookup fails.
+     *
+     * @return list<array{event: string, severity: string, headline: string}>
+     */
+    public function alerts(): array
+    {
+        if (! $this->configured()) {
+            return [];
+        }
+
+        $lat = round((float) $this->settings()->get('latitude'), 3);
+        $lon = round((float) $this->settings()->get('longitude'), 3);
+
+        return Cache::remember('home-dashboard:alerts:'.$lat.','.$lon, 300, function () use ($lat, $lon) {
+            try {
+                $features = Http::timeout(8)
+                    ->withHeaders(['User-Agent' => 'home-dashboard (https://github.com/joshdaugherty/home-dashboard)', 'Accept' => 'application/geo+json'])
+                    ->get('https://api.weather.gov/alerts/active', ['point' => "{$lat},{$lon}"])
+                    ->throw()
+                    ->json('features') ?? [];
+            } catch (Throwable) {
+                return [];
+            }
+
+            $rank = ['Extreme' => 0, 'Severe' => 1, 'Moderate' => 2, 'Minor' => 3];
+
+            return collect($features)
+                ->map(fn (array $f) => $f['properties'] ?? [])
+                ->filter(fn (array $p) => ! empty($p['event']))
+                ->map(fn (array $p) => [
+                    'event' => (string) $p['event'],
+                    'severity' => (string) ($p['severity'] ?? 'Unknown'),
+                    'headline' => (string) ($p['headline'] ?? $p['event']),
+                ])
+                ->sortBy(fn (array $a) => $rank[$a['severity']] ?? 4)
+                ->unique('event')
+                ->take(3)
+                ->values()
+                ->all();
+        });
+    }
+    /**
+     * The animated NWS radar loop for the nearest radar to the configured location, or null
+     * outside the US or when the lookup fails. The station rarely changes, so it is cached for a month.
+     */
+    public function radarUrl(): ?string
+    {
+        if (! $this->configured()) {
+            return null;
+        }
+
+        $lat = round((float) $this->settings()->get('latitude'), 3);
+        $lon = round((float) $this->settings()->get('longitude'), 3);
+        $key = 'home-dashboard:radar:'.$lat.','.$lon;
+
+        $station = Cache::get($key);
+
+        if ($station === null && ! Cache::has($key.':failed')) {
+            try {
+                $station = Http::timeout(8)
+                    ->withHeaders(['User-Agent' => 'home-dashboard (https://github.com/joshdaugherty/home-dashboard)'])
+                    ->get("https://api.weather.gov/points/{$lat},{$lon}")
+                    ->throw()
+                    ->json('properties.radarStation');
+            } catch (Throwable) {
+                $station = null;
+            }
+
+            if (is_string($station) && preg_match('/^[A-Z]{4}$/', $station)) {
+                Cache::put($key, $station, now()->addMonth());
+            } else {
+                $station = null;
+                Cache::put($key.':failed', true, 3600);
+            }
+        }
+
+        return $station ? "https://radar.weather.gov/ridge/standard/{$station}_loop.gif" : null;
+    }
+
+    /**
      * @return array{current: array<string, mixed>, daily: list<array<string, mixed>>, unit: string}
      */
     private function fetch(): array
@@ -76,10 +157,11 @@ class Weather
             'latitude' => $this->settings()->get('latitude'),
             'longitude' => $this->settings()->get('longitude'),
             'timezone' => $this->settings()->get('timezone'),
-            'current' => 'temperature_2m,apparent_temperature,weather_code,is_day',
+            'current' => 'temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,wind_speed_10m',
             'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
             'forecast_days' => 5,
             'temperature_unit' => $metric ? 'celsius' : 'fahrenheit',
+            'wind_speed_unit' => $metric ? 'kmh' : 'mph',
         ])->throw()->json();
 
         $current = $json['current'] ?? null;
@@ -106,9 +188,14 @@ class Weather
 
         return [
             'unit' => $metric ? '°C' : '°F',
+            'wind_unit' => $metric ? 'km/h' : 'mph',
             'current' => [
                 'temp' => (int) round($current['temperature_2m']),
                 'feels' => (int) round($current['apparent_temperature']),
+                'humidity' => isset($current['relative_humidity_2m']) ? (int) round($current['relative_humidity_2m']) : null,
+                'wind' => isset($current['wind_speed_10m']) ? (int) round($current['wind_speed_10m']) : null,
+                // Today's chance of rain: the day's highest hourly chance.
+                'rain' => $days[0]['precip'] ?? null,
                 'label' => $label,
                 'icon' => $icon,
             ],
