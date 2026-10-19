@@ -53,6 +53,7 @@ class GroceriesTest extends TestCase
                 ['id' => 'p-0', 'properties' => ['Name' => $this->title('Leftovers'), 'Date' => ['date' => ['start' => $today]], 'Meal' => ['relation' => []], 'Added to list' => ['checkbox' => true]]],
                 ['id' => 'p-flex', 'properties' => ['Name' => $this->title('Pasta'), 'Date' => ['date' => null], 'Meal' => ['relation' => [['id' => 'm-pasta']]], 'Added to list' => ['checkbox' => false], 'Done' => ['checkbox' => false]]],
             ], 'has_more' => false]),
+            'api.notion.com/v1/pages' => Http::response(['id' => 'a-new']),
             'api.notion.com/v1/pages/*' => Http::response(['id' => 'x']),
         ]);
     }
@@ -185,5 +186,73 @@ class GroceriesTest extends TestCase
         Cache::put('home-dashboard:notion:v1:items', ['oops' => 'not rows'], 600);
 
         $this->assertNotNull(app(Groceries::class)->shoppingList());
+    }
+
+    private function fakeKroger(?array $products = null): array
+    {
+        config(['home-dashboard.kroger' => ['client_id' => 'kid', 'client_secret' => 'ksecret', 'location_id' => '02500622']]);
+
+        return [
+            'api.kroger.com/v1/connect/oauth2/token' => Http::response(['access_token' => 'tok', 'expires_in' => 1800]),
+            'api.kroger.com/v1/products*' => Http::response(['data' => $products ?? [['description' => 'Mystery Brand', 'aisleLocations' => [['description' => 'AISLE 14', 'number' => '14']]]]]),
+        ];
+    }
+
+    public function test_an_item_with_no_aisle_is_filed_where_kroger_says_it_is_and_the_row_is_created(): void
+    {
+        $this->fakeNotion($this->fakeKroger());
+
+        $groups = app(Groceries::class)->shoppingList();
+
+        $this->assertContains('Aisle 14', array_column($groups, 'name'));
+        $this->assertNotContains('Unsorted', array_column($groups, 'name'));
+        Http::assertSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/v1/pages')
+            && $r['properties']['Name']['title'][0]['text']['content'] === 'Aisle 14'
+            && $r['properties']['Order']['number'] === 140
+            && $r['properties']['Kroger aisle']['rich_text'][0]['text']['content'] === 'AISLE 14');
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-mystery') && isset($r['properties']['Aisle']['relation'][0]['id']));
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'api.kroger.com/v1/products') && $r['filter.locationId'] === '02500622' && $r['filter.term'] === 'mystery' && $r->hasHeader('Authorization', 'Bearer tok'));
+    }
+
+    public function test_an_existing_aisle_row_with_the_same_kroger_label_is_reused(): void
+    {
+        $this->fakeNotion($this->fakeKroger() + [
+            'api.notion.com/v1/data_sources/ds-aisles/query' => Http::response(['results' => [
+                ['id' => 'a-14', 'properties' => ['Name' => $this->title('Breakfast aisle'), 'Store' => ['select' => ['name' => 'Kroger']], 'Order' => ['number' => 5], 'Kroger aisle' => ['rich_text' => [['plain_text' => 'AISLE 14']]]]],
+            ], 'has_more' => false]),
+        ]);
+
+        $groups = app(Groceries::class)->shoppingList();
+
+        $this->assertContains('Breakfast aisle', array_column($groups, 'name'));
+        Http::assertNotSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/v1/pages'));
+    }
+
+    public function test_an_item_kroger_cannot_place_stays_unsorted_and_is_not_retried_on_every_refresh(): void
+    {
+        $this->fakeNotion($this->fakeKroger([]));
+
+        $this->assertContains('Unsorted', array_column(app(Groceries::class)->shoppingList(), 'name'));
+        app(Groceries::class)->shoppingList();
+
+        $this->assertCount(1, Http::recorded(fn (Request $r) => str_contains($r->url(), 'api.kroger.com/v1/products')), 'asked Kroger once, then remembered');
+        Http::assertNotSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/v1/pages'));
+    }
+
+    public function test_kroger_being_down_does_not_break_the_list(): void
+    {
+        $this->fakeNotion(['api.kroger.com/*' => Http::response('nope', 500)]);
+        config(['home-dashboard.kroger' => ['client_id' => 'kid', 'client_secret' => 'ksecret', 'location_id' => '02500622']]);
+
+        Livewire::test(Shopping::class)->assertOk()->assertSee('Unsorted');
+    }
+
+    public function test_kroger_is_not_called_unless_configured(): void
+    {
+        $this->fakeNotion();
+
+        app(Groceries::class)->shoppingList();
+
+        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), 'api.kroger.com'));
     }
 }

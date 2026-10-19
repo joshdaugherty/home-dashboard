@@ -96,6 +96,14 @@ return [
         'meals' => env('NOTION_MEALS'),
         'plan' => env('NOTION_PLAN'),
     ],
+    // Optional: files items that have no aisle under the aisle Kroger's public product API says they are in at one store.
+    // Register an app at https://developer.kroger.com (Products). `location_id` is the store's division plus store number,
+    // e.g. the last two parts of its kroger.com store URL joined: .../025/00622 is 02500622. Keep the secret in the environment.
+    'kroger' => [
+        'client_id' => env('KROGER_CLIENT_ID'),
+        'client_secret' => env('KROGER_CLIENT_SECRET'),
+        'location_id' => env('KROGER_LOCATION_ID'),
+    ],
     'cache' => [
         'weather' => 600,  // seconds
         'calendar' => 600,

@@ -110,10 +110,10 @@ The Shopping and Meals tabs read and write four Notion databases, so Notion stay
 
 | Database | Columns |
 | --- | --- |
-| **Aisles** | Name, Store (Kroger / Costco), Order (walking order; Costco can be its own aisle), Description |
+| **Aisles** | Name, Store (Kroger / Costco), Order (walking order; Costco can be its own aisle), Kroger aisle (optional label this row stands for), Description |
 | **Items** | Name, Aisle (relation), Need it (checkbox: ticked means it is on the list), Note (for example "need 1") |
 | **Meals** | Name, Ingredients (relation to Items), Recipe link, Notes |
-| **Meal Plan** | Name, Date, Meal (relation), Added to list (checkbox) |
+| **Meal Plan** | Name, Date (optional), Meal (relation), Added to list (checkbox), Done (checkbox) |
 
 Create an internal integration at <https://www.notion.so/profile/integrations> with read, update and insert content, share the page holding the four databases with it, and configure:
 
@@ -129,6 +129,18 @@ NOTION_PLAN=...
 - **Meals** shows the next seven days of the plan. A Meal Plan row with no Date is a meal planned for the week but not for a day: it appears under "Pick one for the week", and its Tonight button gives it today's date. Tick Done on an undated row to hide it.
   "Add ingredients to the list" ticks Need it on every ingredient of the planned meals that is not already on the list and sets Added to list on those plan rows, so pressing it twice does nothing the second time.
 - Data is cached for a minute (items) to five minutes (aisles, meals, plan), and a failed refresh serves the last good copy. Changes made in Notion appear within about that time plus the pane's refresh. The token never reaches the browser, and only ids that came from the Items database can be ticked.
+
+### Filing items by Kroger aisle (optional)
+
+Items on the list with no Aisle are filed automatically using [Kroger's public product API](https://developer.kroger.com), which reports the aisle each product is in at a given store. Register an app there (Products), then set:
+
+```
+KROGER_CLIENT_ID=...
+KROGER_CLIENT_SECRET=...      # server-side only, like the Notion token
+KROGER_LOCATION_ID=...        # division + store number: kroger.com/stores/.../025/00622 is 02500622
+```
+
+The aisle row is found by its "Kroger aisle" label (for example `AISLE 14` or `DAIRY`) or created on first use ("Aisle 14", ordered by number; named sections such as Dairy start at 500 for you to reorder), and the item's Aisle is written back to Notion, so an aisle you choose yourself is never overwritten. At most five lookups run per refresh, answers are remembered for 30 days (a miss for a day, a failure for five minutes), and nothing breaks when Kroger is unreachable: items just stay under Unsorted.
 
 ## Background pictures
 

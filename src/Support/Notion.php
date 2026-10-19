@@ -69,6 +69,21 @@ class Notion
         }
     }
 
+    /** Create a page in a data source and return its id. */
+    public function create(string $dataSourceId, array $properties): string
+    {
+        $response = $this->request()->post('https://api.notion.com/v1/pages', [
+            'parent' => ['type' => 'data_source_id', 'data_source_id' => $dataSourceId],
+            'properties' => $properties,
+        ]);
+
+        if (! $response->successful() || ! $response->json('id')) {
+            throw new RuntimeException('Notion create failed ('.$response->status().').');
+        }
+
+        return (string) $response->json('id');
+    }
+
     private function request()
     {
         return Http::withToken((string) $this->token())

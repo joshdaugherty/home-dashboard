@@ -16,7 +16,7 @@ class Groceries
 {
     private const PREFIX = 'home-dashboard:notion:v1:';
 
-    public function __construct(private Notion $notion, private CalendarFeeds $calendars) {}
+    public function __construct(private Notion $notion, private CalendarFeeds $calendars, private Kroger $kroger) {}
 
     public function configured(): bool
     {
@@ -35,6 +35,8 @@ class Groceries
         if ($items === null || $aisles === null) {
             return null;
         }
+
+        [$items, $aisles] = $this->fileUnsorted($items, $aisles);
 
         $groups = [];
 
@@ -55,6 +57,89 @@ class Groceries
         usort($groups, fn ($a, $b) => [$a['order'], $a['name']] <=> [$b['order'], $b['name']]);
 
         return $groups;
+    }
+
+    /**
+     * Items on the list with no aisle are filed where the Kroger store says they are. The aisle row is found by its
+     * "Kroger aisle" label or created on first use, and the choice is written back to Notion. A few lookups per
+     * refresh at most, so a long list sorts itself over a minute or two.
+     *
+     * @return array{0: array, 1: array}
+     */
+    private function fileUnsorted(array $items, array $aisles): array
+    {
+        if (! $this->kroger->configured()) {
+            return [$items, $aisles];
+        }
+
+        $todo = array_filter($items, fn ($item) => $item['need'] && $item['aisle'] === null && $this->kroger->pending($item['name']));
+
+        if ($todo === []) {
+            return [$items, $aisles];
+        }
+
+        try {
+            return Cache::lock('home-dashboard:notion:filing', 30)->block(3, function () use ($todo) {
+                // Another request may have filed things while we waited for the lock.
+                $items = $this->items() ?? [];
+                $aisles = $this->aisles() ?? [];
+
+                foreach (array_slice($todo, 0, 5, true) as $id => $item) {
+                    $label = $this->kroger->aisleFor($item['name']);
+
+                    if ($label === null || ($items[$id]['aisle'] ?? null) !== null) {
+                        continue;
+                    }
+
+                    try {
+                        $aisleId = $this->aisleForLabel($label, $aisles);
+                        $this->notion->update($id, ['Aisle' => ['relation' => [['id' => $aisleId]]]]);
+                        $items[$id]['aisle'] = $aisleId;
+                    } catch (Throwable) {
+                        continue;
+                    }
+                }
+
+                $this->store('items', $items, 60);
+                $this->store('aisles', $aisles, 300);
+
+                return [$items, $aisles];
+            });
+        } catch (Throwable) {
+            return [$items, $aisles];
+        }
+    }
+
+    /** The Aisles row standing for a Kroger label, creating it when there is none yet. */
+    private function aisleForLabel(string $label, array &$aisles): string
+    {
+        foreach ($aisles as $aisle) {
+            if (strcasecmp($aisle['kroger'], $label) === 0) {
+                return $aisle['id'];
+            }
+        }
+
+        $number = preg_match('/^aisle\s+(\d+)$/i', $label, $m) ? (int) $m[1] : null;
+        $name = $number !== null ? 'Aisle '.$number : ucwords(strtolower($label));
+        // Numbered aisles go in number order; the store's named sections (Dairy, Produce...) start after them to be reordered.
+        $order = $number !== null ? $number * 10 : 500;
+
+        $id = $this->notion->create((string) $this->notion->dataSource('aisles'), [
+            'Name' => ['title' => [['text' => ['content' => $name]]]],
+            'Store' => ['select' => ['name' => 'Kroger']],
+            'Order' => ['number' => $order],
+            'Kroger aisle' => ['rich_text' => [['text' => ['content' => $label]]]],
+        ]);
+
+        $aisles[$id] = ['id' => $id, 'name' => $name, 'store' => 'Kroger', 'order' => (float) $order, 'kroger' => $label];
+
+        return $id;
+    }
+
+    private function store(string $name, array $data, int $ttl): void
+    {
+        Cache::put(self::PREFIX.$name, $data, $ttl);
+        Cache::put(self::PREFIX.$name.':stale', $data, now()->addDays(30));
     }
 
     /** Take an item off the list (Notion's "Need it" unticked). Only items we know about are touched. */
@@ -208,7 +293,7 @@ class Groceries
         });
     }
 
-    /** @return array<string, array{id: string, name: string, store: ?string, order: float}>|null */
+    /** @return array<string, array{id: string, name: string, store: ?string, order: float, kroger: string}>|null */
     private function aisles(): ?array
     {
         return $this->cached('aisles', 300, function () {
@@ -217,6 +302,7 @@ class Groceries
                 'name' => $this->title($page, 'Name'),
                 'store' => $page['properties']['Store']['select']['name'] ?? null,
                 'order' => (float) ($page['properties']['Order']['number'] ?? 9999),
+                'kroger' => $this->text($page, 'Kroger aisle'),
             ], $this->notion->query($this->notion->dataSource('aisles'))));
         });
     }
