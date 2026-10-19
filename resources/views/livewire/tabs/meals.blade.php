@@ -30,7 +30,19 @@
         <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));">
             @foreach ($week['days'] as $day)
                 <div wire:key="day-{{ $day['date'] }}" class="rounded-2xl border bg-zinc-900 p-4 {{ $day['today'] ? 'border-zinc-500' : 'border-zinc-800' }}">
-                    <flux:heading>{{ $day['label'] }}@if ($day['today']) <span class="text-zinc-400">· today</span>@endif</flux:heading>
+                    <div class="flex items-center justify-between gap-3">
+                        <flux:heading class="{{ $day['past'] ? 'opacity-60' : '' }}">{{ $day['label'] }}@if ($day['today']) <span class="text-zinc-400">· today</span>@endif</flux:heading>
+                        <button type="button" wire:click="pick('{{ $day['date'] }}')" class="shrink-0 rounded-xl text-[0.9rem] text-zinc-100 active:bg-zinc-700" style="min-height: 2.75rem; padding: 0.25rem 1rem; background: rgba(63, 63, 70, 0.8);">{{ $picking === $day['date'] ? 'Cancel' : ($day['meals'] ? 'Add' : 'Choose') }}</button>
+                    </div>
+                    @if ($picking === $day['date'])
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            @forelse ($week['flexible'] as $option)
+                                <button type="button" wire:key="opt-{{ $day['date'] }}-{{ $option['id'] }}" wire:click="assign('{{ $option['id'] }}', '{{ $day['date'] }}')" class="rounded-full text-[0.95rem] text-zinc-100 active:bg-zinc-600" style="min-height: 2.75rem; padding: 0.25rem 1rem; background: rgba(63, 63, 70, 0.9);">{{ $option['name'] }}</button>
+                            @empty
+                                <flux:text>No meals left to pick from this week.</flux:text>
+                            @endforelse
+                        </div>
+                    @endif
                     @forelse ($day['meals'] as $meal)
                         <div wire:key="meal-{{ $meal['id'] }}" class="mt-2">
                             <button type="button" @click="open = open === '{{ $meal['id'] }}' ? null : '{{ $meal['id'] }}'" class="flex w-full items-center justify-between gap-3 rounded-xl text-left active:bg-zinc-800" style="min-height: 3rem; padding: 0.25rem 0.5rem;">
@@ -38,6 +50,7 @@
                                 @if ($meal['added'])<span class="text-[0.75rem] text-emerald-400">on the list</span>@endif
                             </button>
                             <div x-show="open === '{{ $meal['id'] }}'" x-cloak style="padding: 0.25rem 0.5rem;">
+                                <button type="button" wire:click="clear('{{ $meal['id'] }}')" wire:loading.attr="disabled" wire:target="clear('{{ $meal['id'] }}')" class="mb-2 rounded-xl text-[0.9rem] text-zinc-100 active:bg-zinc-700" style="min-height: 2.75rem; padding: 0.25rem 1rem; background: rgba(63, 63, 70, 0.8);">Clear this day</button>
                                 @if ($meal['notes'])<flux:text class="mb-1">{{ $meal['notes'] }}</flux:text>@endif
                                 @forelse ($meal['ingredients'] as $ingredient)
                                     <div class="text-[0.95rem] {{ $ingredient['need'] ? 'text-zinc-100' : 'text-zinc-400' }}">• {{ $ingredient['name'] }}@if ($ingredient['need']) <span class="text-zinc-500">(on the list)</span>@endif</div>

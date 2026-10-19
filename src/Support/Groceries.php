@@ -267,7 +267,8 @@ class Groceries
     public function week(): ?array
     {
         $today = $this->calendars->now()->startOfDay();
-        $plan = $this->plan($today);
+        $start = $this->weekStart();
+        $plan = $this->plan($start);
         $meals = $this->meals();
         $items = $this->items();
 
@@ -278,8 +279,14 @@ class Groceries
         $days = [];
 
         for ($i = 0; $i < 7; $i++) {
-            $day = $today->addDays($i);
-            $days[$day->toDateString()] = ['date' => $day->toDateString(), 'label' => $day->format('l, M j'), 'today' => $i === 0, 'meals' => []];
+            $day = $start->addDays($i);
+            $days[$day->toDateString()] = [
+                'date' => $day->toDateString(),
+                'label' => $day->format('l, M j'),
+                'today' => $day->equalTo($today),
+                'past' => $day->lessThan($today),
+                'meals' => [],
+            ];
         }
 
         $flexible = [];
@@ -310,29 +317,59 @@ class Groceries
     /** Decide a day-of meal: give an undated plan entry today's date, so it moves into today's card. */
     public function makeToday(string $planId): bool
     {
-        $today = $this->calendars->now()->startOfDay();
-        $entry = collect($this->plan($today) ?? [])->firstWhere('id', $planId);
+        return $this->assign($planId, $this->calendars->now()->toDateString());
+    }
 
-        if (! $entry || $entry['date'] !== '') {
+    /** Put an undated plan entry on a day of this week. */
+    public function assign(string $planId, string $date): bool
+    {
+        $start = $this->weekStart();
+        $entry = collect($this->plan($start) ?? [])->firstWhere('id', $planId);
+
+        if (! $entry || $entry['date'] !== '' || ! in_array($date, $this->weekDates($start), true)) {
             return false;
         }
 
+        return $this->setDate($planId, $date, $start);
+    }
+
+    /** Take a plan entry off its day, so it goes back to the pick-one-for-the-week list. */
+    public function clear(string $planId): bool
+    {
+        $start = $this->weekStart();
+        $entry = collect($this->plan($start) ?? [])->firstWhere('id', $planId);
+
+        if (! $entry || $entry['date'] === '') {
+            return false;
+        }
+
+        return $this->setDate($planId, null, $start);
+    }
+
+    private function setDate(string $planId, ?string $date, CarbonImmutable $start): bool
+    {
         try {
-            $this->notion->update($planId, ['Date' => ['date' => ['start' => $today->toDateString()]]]);
+            $this->notion->update($planId, ['Date' => ['date' => $date === null ? null : ['start' => $date]]]);
         } catch (Throwable) {
             return false;
         }
 
-        Cache::forget(self::PREFIX.$this->planKey($today));
+        Cache::forget(self::PREFIX.$this->planKey($start));
 
         return true;
+    }
+
+    /** @return list<string> */
+    private function weekDates(CarbonImmutable $start): array
+    {
+        return array_map(fn ($i) => $start->addDays($i)->toDateString(), range(0, 6));
     }
 
     /** Put the ingredients of the week's planned meals on the shopping list. Returns how many items were added. */
     public function addWeekToList(): int
     {
-        $today = $this->calendars->now()->startOfDay();
-        $plan = $this->plan($today);
+        $start = $this->weekStart();
+        $plan = $this->plan($start);
         $meals = $this->meals();
         $items = $this->items();
 
@@ -370,7 +407,7 @@ class Groceries
         }
 
         $this->patchItems(array_map(fn () => true, $added));
-        Cache::forget(self::PREFIX.$this->planKey($today));
+        Cache::forget(self::PREFIX.$this->planKey($start));
 
         return count($added);
     }
@@ -429,6 +466,7 @@ class Groceries
                     ['and' => [
                         ['property' => 'Date', 'date' => ['is_empty' => true]],
                         ['property' => 'Done', 'checkbox' => ['equals' => false]],
+                        ['timestamp' => 'created_time', 'created_time' => ['on_or_after' => $from->subDays(2)->toDateString()]],
                     ]],
                 ]],
                 'sorts' => [['property' => 'Date', 'direction' => 'ascending']],
@@ -443,6 +481,14 @@ class Groceries
                 'done' => (bool) ($page['properties']['Done']['checkbox'] ?? false),
             ], $pages);
         });
+    }
+
+    /** The Sunday on or before today: the plan resets then, because that is when the groceries are bought. */
+    private function weekStart(): CarbonImmutable
+    {
+        $today = $this->calendars->now()->startOfDay();
+
+        return $today->subDays($today->dayOfWeek);
     }
 
     private function planKey(CarbonImmutable $from): string

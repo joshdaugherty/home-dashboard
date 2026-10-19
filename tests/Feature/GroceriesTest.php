@@ -2,6 +2,7 @@
 
 namespace JoshDaugherty\HomeDashboard\Tests\Feature;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -14,6 +15,21 @@ use Livewire\Livewire;
 
 class GroceriesTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // A Wednesday, so "this week" (Sunday to Saturday) holds today and tomorrow whatever day the suite runs.
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-10-21 12:00', 'America/Chicago'));
+    }
+
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+
+        parent::tearDown();
+    }
+
     protected function defineEnvironment($app): void
     {
         parent::defineEnvironment($app);
@@ -140,10 +156,14 @@ class GroceriesTest extends TestCase
         $week = app(Groceries::class)->week();
 
         $this->assertCount(7, $week['days']);
-        $this->assertSame('Leftovers', $week['days'][0]['meals'][0]['name']);
-        $this->assertSame('Tacos', $week['days'][1]['meals'][0]['name']);
-        $this->assertSame(['lime', 'egg'], array_column($week['days'][1]['meals'][0]['ingredients'], 'name'));
+        $this->assertSame('Leftovers', $week['days'][3]['meals'][0]['name']);
+        $this->assertSame('Tacos', $week['days'][4]['meals'][0]['name']);
+        $this->assertSame(['lime', 'egg'], array_column($week['days'][4]['meals'][0]['ingredients'], 'name'));
         $this->assertSame(['Pasta'], array_column($week['flexible'], 'name'), 'a meal without a day is offered to pick from');
+        $this->assertSame('2026-10-18', $week['days'][0]['date'], 'the week starts on the Sunday before today');
+        $this->assertSame([false, false, false, true, false, false, false], array_column($week['days'], 'today'));
+        $this->assertTrue($week['days'][2]['past']);
+        $this->assertFalse($week['days'][3]['past']);
 
         Livewire::test(Meals::class)->assertSee('Tacos')->assertSee('Friday favorite')->assertSee('Add ingredients to the list');
     }
@@ -159,6 +179,24 @@ class GroceriesTest extends TestCase
         $this->assertFalse(app(Groceries::class)->makeToday('p-1'), 'a meal that already has a day is left alone');
     }
 
+    public function test_a_day_can_be_given_a_meal_from_the_weeks_list_and_cleared_again(): void
+    {
+        $this->fakeNotion();
+
+        Livewire::test(Meals::class)->call('pick', '2026-10-23')->assertSet('picking', '2026-10-23')->assertSee('Pasta')
+            ->call('assign', 'p-flex', '2026-10-23')->assertSet('picking', null);
+
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/p-flex') && $r['properties']['Date']['date']['start'] === '2026-10-23');
+
+        $groceries = app(Groceries::class);
+        $this->assertFalse($groceries->assign('p-flex', '2026-11-30'), 'only days of this week');
+        $this->assertFalse($groceries->assign('p-1', '2026-10-23'), 'a meal that already has a day is left alone');
+        $this->assertFalse($groceries->clear('p-flex'), 'an undated meal has nothing to clear');
+
+        $this->assertTrue($groceries->clear('p-1'));
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/p-1') && array_key_exists('date', $r['properties']['Date']) && $r['properties']['Date']['date'] === null);
+    }
+
     public function test_the_plan_query_asks_for_this_week_and_undated_meals_that_are_not_done(): void
     {
         $this->fakeNotion();
@@ -167,7 +205,10 @@ class GroceriesTest extends TestCase
 
         Http::assertSent(fn (Request $r) => str_contains($r->url(), 'ds-plan/query')
             && isset($r['filter']['or'][1]['and'][0]['date']['is_empty'])
-            && $r['filter']['or'][1]['and'][1]['property'] === 'Done');
+            && $r['filter']['or'][1]['and'][1]['property'] === 'Done'
+            && $r['filter']['or'][0]['and'][0]['date']['on_or_after'] === '2026-10-18'
+            && $r['filter']['or'][0]['and'][1]['date']['on_or_before'] === '2026-10-24'
+            && $r['filter']['or'][1]['and'][2]['created_time']['on_or_after'] === '2026-10-16');
     }
 
     public function test_adding_the_week_ticks_only_ingredients_not_already_needed_and_marks_the_plan(): void
