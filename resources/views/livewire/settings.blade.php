@@ -73,23 +73,6 @@
                                 <flux:input wire:model="feeds.{{ $i }}.name" label="Name" placeholder="Family" />
                                 @error("feeds.{$i}.name") <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
                             </div>
-                            @if ($feed['person'] === '' || ! collect($people)->contains('id', $feed['person']))
-                            <div>
-                                <flux:text class="mb-1 text-sm font-medium">Color</flux:text>
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach ($palette as $name => $hex)
-                                        <button
-                                            type="button"
-                                            wire:click="$set('feeds.{{ $i }}.color', '{{ $name }}')"
-                                            class="size-12 rounded-full border-2 {{ $feed['color'] === $name ? 'border-zinc-900 dark:border-white' : 'border-transparent' }}"
-                                            style="background-color: {{ $hex }}"
-                                            aria-label="{{ ucfirst($name) }}"
-                                            aria-pressed="{{ $feed['color'] === $name ? 'true' : 'false' }}"
-                                        ></button>
-                                    @endforeach
-                                </div>
-                            </div>
-                            @endif
                         </div>
 
                         <flux:select wire:model="feeds.{{ $i }}.category" label="Category">
@@ -105,6 +88,24 @@
                                     <flux:select.option value="{{ $person['id'] }}">{{ $person['name'] ?: 'Unnamed' }}</flux:select.option>
                                 @endforeach
                             </flux:select>
+                        @endif
+
+                        @if ($feed['person'] === '' || ! collect($people)->contains('id', $feed['person']))
+                        <div>
+                            <flux:text class="mb-1 text-sm font-medium">Color</flux:text>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach ($palette as $name => $hex)
+                                    <button
+                                        type="button"
+                                        wire:click="$set('feeds.{{ $i }}.color', '{{ $name }}')"
+                                        class="size-12 rounded-full border-2 {{ $feed['color'] === $name ? 'border-zinc-900 dark:border-white' : 'border-transparent' }}"
+                                        style="background-color: {{ $hex }}"
+                                        aria-label="{{ ucfirst($name) }}"
+                                        aria-pressed="{{ $feed['color'] === $name ? 'true' : 'false' }}"
+                                    ></button>
+                                @endforeach
+                            </div>
+                        </div>
                         @endif
 
                         <div>
