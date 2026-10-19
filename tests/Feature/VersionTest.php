@@ -44,4 +44,16 @@ class VersionTest extends TestCase
 
         $this->get('/')->assertOk()->assertDontSee('checkVersion(), ', false);
     }
-}
+
+    public function test_the_settings_fingerprint_changes_when_a_setting_is_saved_and_is_exposed(): void
+    {
+        $before = Version::settings();
+        $this->getJson('/version')->assertJson(['settings' => $before]);
+
+        $this->travel(5)->seconds();
+        app(\JoshDaugherty\HomeDashboard\Support\Settings::class)->set('units', 'metric');
+
+        $this->assertNotSame($before, Version::settings());
+        $this->getJson('/version')->assertJson(['settings' => Version::settings()]);
+        $this->get('/')->assertSee(Version::settings(), false);
+    }}

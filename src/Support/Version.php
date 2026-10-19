@@ -2,6 +2,9 @@
 
 namespace JoshDaugherty\HomeDashboard\Support;
 
+use JoshDaugherty\HomeDashboard\Models\Setting;
+use Throwable;
+
 /**
  * An opaque string that changes whenever the app is redeployed, so an open page
  * can tell it is stale. Cloud builds a fresh image per deploy, so the build
@@ -9,6 +12,22 @@ namespace JoshDaugherty\HomeDashboard\Support;
  */
 class Version
 {
+    /**
+     * A short fingerprint of the saved settings (latest change and row count), so a page
+     * left open on another device notices when the settings were edited. Reveals nothing
+     * about the values.
+     */
+    public static function settings(): string
+    {
+        try {
+            $row = Setting::query()->selectRaw('max(updated_at) as latest, count(*) as total')->first();
+
+            return substr(md5(($row?->latest ?? '-').'|'.($row?->total ?? 0)), 0, 8);
+        } catch (Throwable) {
+            return '-';
+        }
+    }
+
     public static function current(): string
     {
         if (is_string($fixed = config('home-dashboard.version')) && $fixed !== '') {

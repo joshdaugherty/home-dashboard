@@ -70,7 +70,7 @@ You can manage calendars and location without touching environment variables: op
 - Any signed-in user can open the page. The package leaves access control to the host app; add your own middleware through `home-dashboard.route.middleware` if you want to restrict it.
 ## Auto-reload after a deploy
 
-A kiosk never refreshes on its own, so the shell asks an authenticated `/version` endpoint every 120 s and reloads itself, only while nobody is touching the screen, when the answer changes. The version is derived from the built asset manifest, `composer.lock` and the modified time of `bootstrap/app.php`. Set `DASHBOARD_VERSION` to any string to control it yourself, and `DASHBOARD_VERSION_CHECK` to change the interval in seconds (`0` disables the check).
+A kiosk never refreshes on its own, so the shell asks an authenticated `/version` endpoint every 120 s and reloads itself, only while nobody is touching the screen, when the answer changes. The version is derived from the built asset manifest, `composer.lock` and the modified time of `bootstrap/app.php`. Set `DASHBOARD_VERSION` to any string to control it yourself, and `DASHBOARD_VERSION_CHECK` to change the interval in seconds (`0` disables the check). The same check also compares a short fingerprint of the saved settings, so a change made on another device reloads the frame within a couple of minutes, too.
 
 ## Configuration
 

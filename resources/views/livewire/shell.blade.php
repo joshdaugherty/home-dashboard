@@ -14,6 +14,7 @@
         idleAfter: {{ $idleAfter }},
         ambientAfter: {{ $ambientAfter }},
         version: @js($version),
+        settings: @js($settingsVersion),
         versionUrl: @js($versionUrl),
         init() {
             setInterval(() => {
@@ -27,14 +28,14 @@
                 setInterval(() => this.checkVersion(), {{ $versionEvery * 1000 }});
             @endif
         },
-        // Reload after a deploy, but never mid-touch: only when the frame has been left alone.
+        // Reload after a deploy or a settings change (possibly made on another device), but never mid-touch: only when the frame has been left alone.
         async checkVersion() {
             if ((Date.now() - this.last) / 1000 < 30) return;
             try {
                 const res = await fetch(this.versionUrl, { cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } });
                 if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return;
-                const { version } = await res.json();
-                if (version && version !== this.version) location.reload();
+                const { version, settings } = await res.json();
+                if ((version && version !== this.version) || (settings && settings !== this.settings)) location.reload();
             } catch (e) { /* offline or mid-deploy: try again next tick */ }
         },
         touch() { this.last = Date.now(); this.ambient = false; },

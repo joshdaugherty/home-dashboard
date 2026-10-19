@@ -21,6 +21,7 @@ class Shell extends Component
             'idleAfter' => (int) config('home-dashboard.idle_return_after', 60),
             'ambientAfter' => (int) config('home-dashboard.ambient_after', 120),
             'version' => Version::current(),
+            'settingsVersion' => Version::settings(),
             'versionUrl' => route('home-dashboard.version'),
             'versionEvery' => (int) config('home-dashboard.version_check_every', 120),
         ]);
