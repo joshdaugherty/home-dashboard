@@ -82,8 +82,10 @@
                             type="button"
                             @click="selected = c.key"
                             class="flex min-h-0 min-w-0 flex-col items-center justify-start gap-1 rounded-xl border p-1"
+                            :style="(selected === c.key || c.key === today) ? 'box-shadow: inset 0 0 0 2px #fff;' : ''"
                             :class="[
-                                selected === c.key ? 'border-white bg-zinc-800' : 'border-zinc-800 bg-zinc-900 active:bg-zinc-800',
+                                (selected === c.key || c.key === today) ? 'border-white' : 'border-zinc-800',
+                                selected === c.key ? 'bg-zinc-800' : 'bg-zinc-900 active:bg-zinc-800',
                                 c.out ? 'text-zinc-600' : '',
                             ]"
                         >

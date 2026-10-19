@@ -15,7 +15,7 @@
         @php($looking = $viewing ? collect($week['flexible'])->firstWhere('id', $viewing) : null)
         <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));">
             @foreach ($week['days'] as $day)
-                <button type="button" wire:key="day-{{ $day['date'] }}" wire:click="pick('{{ $day['date'] }}')" class="flex flex-col items-stretch justify-start rounded-2xl border bg-zinc-900 p-4 text-left active:bg-zinc-800 {{ $day['today'] ? 'border-zinc-500' : 'border-zinc-800' }}" style="min-height: 7rem;">
+                <button type="button" wire:key="day-{{ $day['date'] }}" wire:click="pick('{{ $day['date'] }}')" class="flex flex-col items-stretch justify-start rounded-2xl border bg-zinc-900 p-4 text-left active:bg-zinc-800 {{ $day['today'] ? 'border-white' : 'border-zinc-800' }}" style="min-height: 7rem;{{ $day['today'] ? ' box-shadow: inset 0 0 0 2px #fff;' : '' }}">
                     <flux:heading class="{{ $day['past'] ? 'opacity-60' : '' }}">{{ $day['label'] }}@if ($day['today']) <span class="text-zinc-400">· today</span>@endif</flux:heading>
                     @forelse ($day['meals'] as $meal)
                         <div class="mt-2 flex items-center justify-between gap-3">
@@ -30,9 +30,10 @@
         </div>
 
         @if (count($week['flexible']))
-            {{-- Planned for the week but not for a particular day. --}}
-            <flux:heading size="lg" class="mb-1 mt-6">Pick one for the week</flux:heading>
-            <ul>
+            {{-- On hand for the week but not pinned to a day yet. --}}
+            <div class="mt-4 w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+            <flux:heading>On hand, not yet scheduled</flux:heading>
+            <ul class="mt-1">
                 @foreach ($week['flexible'] as $meal)
                     <li wire:key="flex-{{ $meal['id'] }}" class="border-b border-zinc-800">
                         <button type="button" wire:click="view('{{ $meal['id'] }}')" class="flex w-full items-center justify-between gap-3 text-left active:bg-zinc-800" style="min-height: 3rem; padding: 0.25rem 0.5rem;">
@@ -42,6 +43,7 @@
                     </li>
                 @endforeach
             </ul>
+            </div>
         @endif
 
         @if ($chosen)
