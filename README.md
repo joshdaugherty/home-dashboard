@@ -14,7 +14,7 @@ Requires PHP 8.3+, Laravel 13, Livewire 4.1+ and Flux 2.13+ (free components onl
 | Calendar | Month grid plus a per-day agenda for every calendar that is not a class schedule or assignments, with an Everyone / Shared / per-person filter |
 | Class Schedules | The same calendar view, limited to the Class Schedule category |
 | Assignments | The same calendar view, limited to the Assignments category |
-| Shopping | The shopping list from Notion, grouped by store aisle in walking order; tap an item to take it off the list |
+| Shopping | The shopping list from Notion, grouped by store; tap an item to take it off the list, or type in the box to add one (known items are suggested as you type) |
 | Meals | This week's meal plan from Notion; tap a meal for its ingredients, or add them all to the shopping list |
 | Settings | A link (not a pane) to the settings pages |
 
@@ -125,7 +125,7 @@ NOTION_MEALS=...
 NOTION_PLAN=...
 ```
 
-- **Shopping** lists every Item with Need it ticked under its Aisle, sorted by Order. Tapping an item unticks it in Notion. Items without an aisle appear under "Unsorted".
+- **Shopping** lists every Item with Need it ticked, grouped by the Store of its Aisle (Kroger first; an item with no aisle counts as Kroger), alphabetically. Tapping an item unticks it in Notion. The box at the top adds items: matching known items appear as chips to tap, and the Add button puts a typed name on the list, creating a new Item when it is not already in the catalog. The aisle is for the shopping trip itself, so build a Notion view for that: filter Need it, and sort by a rollup of the Aisle's Order (an "Aisle order" rollup on Items) so the list follows the store's walking order.
 - **Meals** shows the next seven days of the plan. A Meal Plan row with no Date is a meal planned for the week but not for a day: it appears under "Pick one for the week", and its Tonight button gives it today's date. Tick Done on an undated row to hide it.
   "Add ingredients to the list" ticks Need it on every ingredient of the planned meals that is not already on the list and sets Added to list on those plan rows, so pressing it twice does nothing the second time.
 - Data is cached for a minute (items) to five minutes (aisles, meals, plan), and a failed refresh serves the last good copy. Changes made in Notion appear within about that time plus the pane's refresh. The token never reaches the browser, and only ids that came from the Items database can be ticked.
@@ -140,7 +140,7 @@ KROGER_CLIENT_SECRET=...      # server-side only, like the Notion token
 KROGER_LOCATION_ID=...        # division + store number: kroger.com/stores/.../025/00622 is 02500622
 ```
 
-The aisle row is found by its "Kroger aisle" label (for example `AISLE 14` or `DAIRY`) or created on first use ("Aisle 14", ordered by number; named sections such as Dairy start at 500 for you to reorder), and the item's Aisle is written back to Notion, so an aisle you choose yourself is never overwritten. At most five lookups run per refresh, answers are remembered for 30 days (a miss for a day, a failure for five minutes), and nothing breaks when Kroger is unreachable: items just stay under Unsorted. Phrases are tried whole, then without the container ("jar of red sauce" as "red sauce"), then as the first of an either-or ("ground beef or turkey" as "ground beef"). To file a whole catalog at once instead of as items reach the list, run `php artisan home-dashboard:file-items`; Notion writes are retried when it rate-limits.
+The aisle row is found by its "Kroger aisle" label (for example `AISLE 14` or `DAIRY`) or created on first use, with an Order that follows a walk through the store: produce, deli, bakery, the even aisles up the store (meat after aisle 14), dairy, personal care, pharmacy, then the odd aisles back down from the highest, with anything else last (the order is the rule in `Kroger::order()`, and you can edit any row's Order), and the item's Aisle is written back to Notion, so an aisle you choose yourself is never overwritten. At most five lookups run per refresh, answers are remembered for 30 days (a miss for a day, a failure for five minutes), and nothing breaks when Kroger is unreachable: items just stay under Unsorted. Phrases are tried whole, then without the container ("jar of red sauce" as "red sauce"), then as the first of an either-or ("ground beef or turkey" as "ground beef"). To file a whole catalog at once instead of as items reach the list, run `php artisan home-dashboard:file-items`; Notion writes are retried when it rate-limits.
 
 ## Background pictures
 

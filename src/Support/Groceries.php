@@ -38,6 +38,7 @@ class Groceries
 
         [$items, $aisles] = $this->fileUnsorted($items, $aisles);
 
+        // The frame groups by store; walking order (aisles) is for the shopping trip itself, in Notion.
         $groups = [];
 
         foreach ($items as $item) {
@@ -45,18 +46,93 @@ class Groceries
                 continue;
             }
 
-            $aisle = $aisles[$item['aisle']] ?? ['id' => '', 'name' => 'Unsorted', 'store' => null, 'order' => PHP_INT_MAX];
-            $groups[$aisle['id']] ??= $aisle + ['items' => []];
-            $groups[$aisle['id']]['items'][] = ['id' => $item['id'], 'name' => $item['name'], 'note' => $item['note']];
+            $store = ($aisles[$item['aisle']]['store'] ?? null) ?: 'Kroger';
+            $groups[$store] ??= ['name' => $store, 'items' => []];
+            $groups[$store]['items'][] = ['id' => $item['id'], 'name' => $item['name'], 'note' => $item['note']];
         }
 
         foreach ($groups as &$group) {
             usort($group['items'], fn ($a, $b) => strcasecmp($a['name'], $b['name']));
         }
+        unset($group);
 
-        usort($groups, fn ($a, $b) => [$a['order'], $a['name']] <=> [$b['order'], $b['name']]);
+        uksort($groups, fn ($a, $b) => [$a === 'Kroger' ? 0 : 1, $a] <=> [$b === 'Kroger' ? 0 : 1, $b]);
 
-        return $groups;
+        return array_values($groups);
+    }
+
+    /**
+     * Items that are not on the list yet and match what was typed, to add with a tap.
+     *
+     * @return list<array{id: string, name: string}>
+     */
+    public function suggestions(string $query, int $limit = 8): array
+    {
+        $query = mb_strtolower(trim($query));
+
+        if ($query === '') {
+            return [];
+        }
+
+        $matches = array_values(array_filter($this->items() ?? [], fn ($item) => ! $item['need'] && str_contains(mb_strtolower($item['name']), $query)));
+
+        // Names that start with what was typed first.
+        usort($matches, fn ($a, $b) => [! str_starts_with(mb_strtolower($a['name']), $query), mb_strtolower($a['name'])] <=> [! str_starts_with(mb_strtolower($b['name']), $query), mb_strtolower($b['name'])]);
+
+        return array_map(fn ($item) => ['id' => $item['id'], 'name' => $item['name']], array_slice($matches, 0, $limit));
+    }
+
+    /** Put a known item on the list. */
+    public function need(string $itemId): bool
+    {
+        $item = ($this->items() ?? [])[$itemId] ?? null;
+
+        if (! $item) {
+            return false;
+        }
+
+        if (! $item['need']) {
+            try {
+                $this->notion->update($itemId, ['Need it' => ['checkbox' => true]]);
+            } catch (Throwable) {
+                return false;
+            }
+
+            $this->patchItems([$itemId => true]);
+        }
+
+        return true;
+    }
+
+    /** Add by name: an item we already know goes back on the list, anything else becomes a new item. Returns its name. */
+    public function addByName(string $name): ?string
+    {
+        $name = trim((string) preg_replace('/\s+/', ' ', $name));
+        $items = $this->items();
+
+        if ($name === '' || mb_strlen($name) > 120 || $items === null) {
+            return null;
+        }
+
+        $existing = collect($items)->first(fn ($item) => mb_strtolower($item['name']) === mb_strtolower($name));
+
+        if ($existing) {
+            return $this->need($existing['id']) ? $existing['name'] : null;
+        }
+
+        try {
+            $id = $this->notion->create((string) $this->notion->dataSource('items'), [
+                'Name' => ['title' => [['text' => ['content' => $name]]]],
+                'Need it' => ['checkbox' => true],
+            ]);
+        } catch (Throwable) {
+            return null;
+        }
+
+        $items[$id] = ['id' => $id, 'name' => $name, 'aisle' => null, 'need' => true, 'note' => ''];
+        $this->store('items', $items, 60);
+
+        return $name;
     }
 
     /**
@@ -141,9 +217,8 @@ class Groceries
         }
 
         $number = preg_match('/^aisle\s+(\d+)$/i', $label, $m) ? (int) $m[1] : null;
-        $name = $number !== null ? 'Aisle '.$number : ucwords(strtolower($label));
-        // Numbered aisles go in number order; the store's named sections (Dairy, Produce...) start after them to be reordered.
-        $order = $number !== null ? $number * 10 : 500;
+        $name = $number !== null ? 'Aisle '.$number : ($label === strtoupper($label) ? ucwords(strtolower($label), " /-") : $label);
+        $order = $this->kroger->order($label);
 
         $id = $this->notion->create((string) $this->notion->dataSource('aisles'), [
             'Name' => ['title' => [['text' => ['content' => $name]]]],

@@ -60,16 +60,17 @@ class GroceriesTest extends TestCase
         ]);
     }
 
-    public function test_the_list_is_grouped_by_aisle_in_store_order_with_unsorted_last(): void
+    public function test_the_dashboard_list_is_grouped_by_store_with_kroger_first(): void
     {
         $this->fakeNotion();
 
         $groups = app(Groceries::class)->shoppingList();
 
-        $this->assertSame(['Costco', 'Produce', 'Unsorted'], array_column($groups, 'name'));
-        $this->assertSame('egg', $groups[1]['items'][0]['name']);
-        $this->assertSame('need 1', $groups[1]['items'][0]['note']);
-        $this->assertCount(1, $groups[1]['items'], 'items nobody needs are left off');
+        $this->assertSame(['Kroger', 'Costco'], array_column($groups, 'name'));
+        $this->assertSame(['egg', 'mystery'], array_column($groups[0]['items'], 'name'), 'an item with no aisle counts as Kroger, alphabetical');
+        $this->assertSame('need 1', $groups[0]['items'][0]['note']);
+        $this->assertSame(['paper towels'], array_column($groups[1]['items'], 'name'));
+        $this->assertNotContains('lime', array_column($groups[0]['items'], 'name'), 'items nobody needs are left off');
     }
 
     public function test_requests_carry_the_token_and_api_version(): void
@@ -85,7 +86,7 @@ class GroceriesTest extends TestCase
     {
         $this->fakeNotion();
 
-        Livewire::test(Shopping::class)->assertSee('Produce')->assertSee('egg')->assertSee('(need 1)')->assertSee('Costco')
+        Livewire::test(Shopping::class)->assertSee('Kroger')->assertSee('egg')->assertSee('(need 1)')->assertSee('Costco')
             ->call('tick', 'i-eggs')->assertDontSee('egg');
 
         Http::assertSent(fn (Request $r) => $r->method() === 'PATCH'
@@ -204,13 +205,11 @@ class GroceriesTest extends TestCase
     {
         $this->fakeNotion($this->fakeKroger());
 
-        $groups = app(Groceries::class)->shoppingList();
+        app(Groceries::class)->shoppingList();
 
-        $this->assertContains('Aisle 14', array_column($groups, 'name'));
-        $this->assertNotContains('Unsorted', array_column($groups, 'name'));
         Http::assertSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/v1/pages')
             && $r['properties']['Name']['title'][0]['text']['content'] === 'Aisle 14'
-            && $r['properties']['Order']['number'] === 140
+            && $r['properties']['Order']['number'] == 1014
             && $r['properties']['Kroger aisle']['rich_text'][0]['text']['content'] === 'AISLE 14');
         Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-mystery') && isset($r['properties']['Aisle']['relation'][0]['id']));
         Http::assertSent(fn (Request $r) => str_contains($r->url(), 'api.kroger.com/v1/products') && $r['filter.locationId'] === '02500622' && $r['filter.term'] === 'mystery' && $r->hasHeader('Authorization', 'Bearer tok'));
@@ -224,17 +223,17 @@ class GroceriesTest extends TestCase
             ], 'has_more' => false]),
         ]);
 
-        $groups = app(Groceries::class)->shoppingList();
+        app(Groceries::class)->shoppingList();
 
-        $this->assertContains('Breakfast aisle', array_column($groups, 'name'));
         Http::assertNotSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/v1/pages'));
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-mystery') && $r['properties']['Aisle']['relation'][0]['id'] === 'a-14');
     }
 
     public function test_an_item_kroger_cannot_place_stays_unsorted_and_is_not_retried_on_every_refresh(): void
     {
         $this->fakeNotion($this->fakeKroger([]));
 
-        $this->assertContains('Unsorted', array_column(app(Groceries::class)->shoppingList(), 'name'));
+        app(Groceries::class)->shoppingList();
         app(Groceries::class)->shoppingList();
 
         $this->assertCount(1, Http::recorded(fn (Request $r) => str_contains($r->url(), 'api.kroger.com/v1/products')), 'asked Kroger once, then remembered');
@@ -246,7 +245,7 @@ class GroceriesTest extends TestCase
         $this->fakeNotion(['api.kroger.com/*' => Http::response('nope', 500)]);
         config(['home-dashboard.kroger' => ['client_id' => 'kid', 'client_secret' => 'ksecret', 'location_id' => '02500622']]);
 
-        Livewire::test(Shopping::class)->assertOk()->assertSee('Unsorted');
+        Livewire::test(Shopping::class)->assertOk()->assertSee('mystery');
     }
 
     public function test_an_either_or_item_falls_back_to_the_first_thing_it_names(): void
@@ -261,6 +260,56 @@ class GroceriesTest extends TestCase
 
         $this->assertSame('PACKAGED MEAT', app(Kroger::class)->aisleFor('ground beef or turkey'));
         $this->assertNull(app(Kroger::class)->aisleFor('side for crockpot meal'));
+    }
+
+    public function test_the_walking_order_follows_the_store(): void
+    {
+        $kroger = app(Kroger::class);
+        $walk = ['PRODUCE', 'PRODUCE TABLE 3', 'DELI', 'DELI 5', 'BAKERY 2', 'AISLE 2', 'AISLE 14', 'MEAT', 'PACKAGED MEAT', 'AISLE 16', 'AISLE 20', 'AISLE 34', 'AISLE 54', 'DAIRY', 'AISLE 56', 'AISLE 59', 'PHARMACY', 'AISLE 62', 'AISLE 55', 'AISLE 31', 'AISLE 5', 'AISLE 1', 'CHECKLANE 4'];
+
+        $orders = array_map(fn ($label) => $kroger->order($label), $walk);
+
+        $sorted = $orders;
+        sort($sorted);
+        $this->assertSame($sorted, $orders, 'labels are listed in walking order, so their orders must already be ascending');
+        $this->assertSame(1014.0, $kroger->order('AISLE 14'));
+    }
+
+    public function test_an_item_can_be_added_by_typing_and_a_known_one_just_goes_back_on_the_list(): void
+    {
+        $this->fakeNotion();
+
+        Livewire::test(Shopping::class)->set('query', 'sparkling water')->call('add')->assertSee('Added sparkling water.')->assertSet('query', '');
+
+        Http::assertSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/v1/pages')
+            && $r['parent']['data_source_id'] === 'ds-items'
+            && $r['properties']['Name']['title'][0]['text']['content'] === 'sparkling water'
+            && $r['properties']['Need it']['checkbox'] === true);
+
+        Http::fake(['api.notion.com/*' => Http::response(['id' => 'x'])]);
+        $this->assertSame('lime', app(Groceries::class)->addByName('LIME'));
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-lime') && $r['properties']['Need it']['checkbox'] === true);
+    }
+
+    public function test_typing_suggests_items_that_are_not_on_the_list_and_tapping_one_adds_it(): void
+    {
+        $this->fakeNotion();
+
+        Livewire::test(Shopping::class)->set('query', 'li')->assertSee('+ lime')->assertDontSee('+ egg')
+            ->call('addItem', 'i-lime')->assertSet('query', '');
+
+        Http::assertSent(fn (Request $r) => $r->method() === 'PATCH' && str_ends_with($r->url(), '/v1/pages/i-lime') && $r['properties']['Need it']['checkbox'] === true);
+        $this->assertFalse(app(Groceries::class)->need('not-an-item'));
+    }
+
+    public function test_a_blank_or_oversized_name_is_not_added(): void
+    {
+        $this->fakeNotion();
+
+        $this->assertNull(app(Groceries::class)->addByName('   '));
+        $this->assertNull(app(Groceries::class)->addByName(str_repeat('x', 121)));
+
+        Http::assertNotSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/v1/pages'));
     }
 
     public function test_the_file_items_command_files_the_whole_catalog_not_just_what_is_on_the_list(): void

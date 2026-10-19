@@ -61,6 +61,44 @@ class Kroger
         return $label;
     }
 
+    /**
+     * Where a Kroger label falls on a walk through the store, so the Aisles database sorts the way a shopping trip goes:
+     * produce, deli, bakery, then the even aisles up the store (with meat after the last center-store aisle), dairy,
+     * personal care, pharmacy, and the odd aisles back down from the highest. Anything else goes last.
+     */
+    public function order(string $label): float
+    {
+        $l = strtoupper(trim($label));
+        $n = (int) preg_replace('/\D+/', '', $l);
+
+        if (preg_match('/^AISLE \d+$/', $l)) {
+            return match (true) {
+                $n >= 60 => 1300 + $n,
+                $n >= 56 => 1200 + $n,
+                $n % 2 === 0 => 1000 + $n,
+                default => 2000 + (60 - $n),
+            };
+        }
+
+        return match (true) {
+            $l === 'PRODUCE' => 100,
+            $l === 'FRUIT' => 101,
+            $l === 'VEGETABLES' => 102,
+            str_starts_with($l, 'PRODUCE TABLE') => 110 + $n,
+            $l === 'DELI/BAKE' => 250,
+            $l === 'DELI' => 200,
+            str_starts_with($l, 'DELI') => 200 + $n,
+            $l === 'BAKERY - IN-STORE' => 300,
+            str_starts_with($l, 'BAKERY') => 300 + $n,
+            $l === 'MEAT' => 1014.1,
+            $l === 'SEAFOOD' => 1014.2,
+            $l === 'PACKAGED MEAT' => 1014.3,
+            $l === 'DAIRY' => 1100,
+            $l === 'PHARMACY' => 1300,
+            default => 5000,
+        };
+    }
+
     /** Forget a remembered answer, so the next lookup asks Kroger again. */
     public function forget(string $item): void
     {
