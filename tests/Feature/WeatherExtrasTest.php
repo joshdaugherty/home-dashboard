@@ -87,4 +87,12 @@ class WeatherExtrasTest extends TestCase
 
         Livewire::test(Today::class)->assertDontSee('⚠');
     }
-}
+
+    public function test_a_forecast_cached_by_an_older_release_is_refetched_instead_of_breaking_the_page(): void
+    {
+        $this->fakeWeather();
+        $old = ['unit' => '°F', 'current' => ['temp' => 70, 'feels' => 69, 'label' => 'Clear', 'icon' => '☀️'], 'daily' => []];
+        \Illuminate\Support\Facades\Cache::put('home-dashboard:weather:v2:'.md5(json_encode([['35.0887', '-92.4421'], 'imperial', 'America/Chicago'])), $old, 600);
+
+        Livewire::test(Today::class)->assertOk()->assertSee('Humidity 64%');
+    }}

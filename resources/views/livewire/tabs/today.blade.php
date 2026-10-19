@@ -47,9 +47,9 @@
                         <div class="text-[clamp(2rem,6vmin,4rem)] font-light leading-none tabular-nums">{{ $forecast['current']['temp'] }}{{ $forecast['unit'] }}</div>
                         <flux:text class="mt-1">{{ $forecast['current']['label'] }} · feels {{ $forecast['current']['feels'] }}°</flux:text>
                         <flux:text class="mt-1 text-[0.85rem]">
-                            @if ($forecast['current']['humidity'] !== null)Humidity {{ $forecast['current']['humidity'] }}%@endif
-                            @if ($forecast['current']['wind'] !== null) · Wind {{ $forecast['current']['wind'] }} {{ $forecast['wind_unit'] }}@endif
-                            @if ($forecast['current']['rain'] !== null) · Rain {{ $forecast['current']['rain'] }}%@endif
+                            @if (($forecast['current']['humidity'] ?? null) !== null)Humidity {{ ($forecast['current']['humidity'] ?? null) }}%@endif
+                            @if (($forecast['current']['wind'] ?? null) !== null) · Wind {{ ($forecast['current']['wind'] ?? null) }} {{ $forecast['wind_unit'] ?? '' }}@endif
+                            @if (($forecast['current']['rain'] ?? null) !== null) · Rain {{ ($forecast['current']['rain'] ?? null) }}%@endif
                         </flux:text>
                     </div>
                 </div>

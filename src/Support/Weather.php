@@ -35,19 +35,20 @@ class Weather
             return null;
         }
 
-        $key = 'home-dashboard:weather:'.md5(json_encode([
+        $key = 'home-dashboard:weather:v2:'.md5(json_encode([
             [$this->settings()->get('latitude'), $this->settings()->get('longitude')],
             $this->settings()->get('units'),
             $this->settings()->get('timezone'),
         ]));
 
-        if ($cached = Cache::get($key)) {
+        // A copy cached by an older release may lack fields the view reads: treat it as a miss.
+        if (($cached = Cache::get($key)) && self::isCurrent($cached)) {
             return $cached;
         }
 
         // After a failure, wait a minute before hitting the API again and serve the stale copy.
         if (Cache::has($key.':failed')) {
-            return Cache::get($key.':stale');
+            return self::usable(Cache::get($key.':stale'));
         }
 
         try {
@@ -56,13 +57,23 @@ class Weather
             Log::warning('home-dashboard: weather refresh failed: '.$e->getMessage());
             Cache::put($key.':failed', true, 60);
 
-            return Cache::get($key.':stale');
+            return self::usable(Cache::get($key.':stale'));
         }
 
         Cache::put($key, $data, (int) config('home-dashboard.cache.weather', 600));
         Cache::put($key.':stale', $data, now()->addHours(6));
 
         return $data;
+    }
+
+    private static function isCurrent(mixed $data): bool
+    {
+        return is_array($data) && isset($data['wind_unit'], $data['current']) && array_key_exists('humidity', $data['current']);
+    }
+
+    private static function usable(mixed $data): ?array
+    {
+        return self::isCurrent($data) ? $data : null;
     }
 
     /**
