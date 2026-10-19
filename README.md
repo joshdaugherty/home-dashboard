@@ -144,7 +144,7 @@ The aisle row is found by its "Kroger aisle" label (for example `AISLE 14` or `D
 
 ## Background pictures
 
-The Today tab shows a new picture every hour under a dark wash, with translucent cards so a little of it shows through. On the idle screen the same picture appears dimmed behind the clock, with its title and credit in a corner box. The ⓘ button on Today opens a lightbox with the title, artist, date, a short description when there is one, and the credit.
+Every tab except Settings shows a new picture every hour under a dark wash, with translucent cards so a little of it shows through. On the idle screen the same picture appears dimmed behind the clock, with its title and credit in a corner box. The ⓘ button on Today opens a lightbox with the title, artist, date, a short description when there is one, and the credit.
 
 - **Art Institute of Chicago** (no key): public-domain paintings from the museum's open API. The search is a strict allow-list: landscapes and seascapes only, and anything mentioning people or figures, nudity, bathing, death, violence or war is excluded. The result is deterministic per hour, cached, and shaped for a landscape frame. Descriptions are CC BY 4.0 and are credited in the lightbox.
 - **NASA Astronomy Picture of the Day** (optional): set `DASHBOARD_NASA_KEY` (a free key from <https://api.nasa.gov>) and NASA takes every other hour. APOD is one picture per day, so it stays the same until midnight; videos and copyrighted pictures are skipped. Treat the key as a secret: set it as a host environment variable. It is only used server-side and never reaches the browser.

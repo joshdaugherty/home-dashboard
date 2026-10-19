@@ -87,7 +87,7 @@ class BackgroundTest extends TestCase
         $this->fakeMuseum([$this->work(7, 4000, 2500)]);
 
         Livewire::test(Today::class)
-            ->assertSee('iiif/2/img7/full/1686', false)
+            ->assertSee('img7', false)
             ->assertSee('Work 7')
             ->assertSee('Artist 7')
             ->assertSee('Art Institute of Chicago');

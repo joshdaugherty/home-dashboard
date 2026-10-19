@@ -5,6 +5,8 @@
 --}}
 <div
     class="relative flex h-full w-full flex-col"
+    style="isolation: isolate;"
+    :class="art && art.url ? 'hd-has-background' : ''"
     x-data="{
         tab: @js($homeTab),
         home: @js($homeTab),
@@ -58,6 +60,15 @@
     @pointerdown.window="touch()"
     @keydown.window="touch()"
 >
+    {{-- Daily painting behind every tab (Settings is its own page). It sits under a dark wash so text stays readable, and a failed load leaves the plain background. --}}
+    <style>.hd-has-background main .bg-zinc-900 { background-color: rgba(24, 24, 27, 0.8); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }</style>
+    <template x-if="art && art.url">
+        <div style="position: absolute; inset: 0; z-index: -1; background: #09090b;" aria-hidden="true">
+            <img :src="art.url" alt="" referrerpolicy="no-referrer" x-on:error="$el.remove()" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(9,9,11,.78), rgba(9,9,11,.62) 50%, rgba(9,9,11,.86));"></div>
+        </div>
+    </template>
+
     {{-- Content: each pane scrolls on its own; the page never does. --}}
     <main class="relative min-h-0 flex-1">
         @foreach ($tabs as $key => $tab)
