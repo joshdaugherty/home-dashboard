@@ -26,6 +26,8 @@ abstract class TestCase extends Orchestra
         $app['config']->set('app.key', 'base64:'.base64_encode(str_repeat('a', 32)));
         // The host app owns auth; the package smoke tests only need the plain web group.
         $app['config']->set('home-dashboard.route.middleware', ['web']);
+        // Never reach the museum from tests; BackgroundTest turns it on with a fake.
+        $app['config']->set('home-dashboard.background.enabled', false);
     }
 
     protected function setUp(): void

@@ -80,6 +80,12 @@ return [
     // the first is the default. Only `today_categories` feed the "Up next" list on Today.
     'categories' => ['Personal', 'Class Schedule', 'Assignments'],
     'today_categories' => ['Personal'],
+    // A daily public-domain painting (Art Institute of Chicago) or NASA picture behind the Today tab.
+    'background' => [
+        'enabled' => (bool) env('DASHBOARD_BACKGROUND', true),
+        // Optional: with a NASA key (https://api.nasa.gov) the Astronomy Picture of the Day takes every other day.
+        'nasa_key' => env('DASHBOARD_NASA_KEY'),
+    ],
     'cache' => [
         'weather' => 600,  // seconds
         'calendar' => 600,

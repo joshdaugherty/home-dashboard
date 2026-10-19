@@ -1,5 +1,5 @@
 <div
-    class="flex h-full flex-col justify-between gap-6"
+    class="relative isolate flex h-full flex-col justify-between gap-6"
     wire:poll.{{ $refresh }}s
     x-data="{
         now: new Date(),
@@ -8,6 +8,13 @@
     }"
     x-init="setInterval(() => now = new Date(), 1000)"
 >
+    @if ($background)
+        {{-- Daily painting behind everything. It sits under a dark wash so text stays readable, and a failed load leaves the plain background. --}}
+        <div class="fixed inset-0 -z-10 bg-zinc-950" aria-hidden="true">
+            <img src="{{ $background['url'] }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()" class="size-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-b from-zinc-950/70 via-zinc-950/50 to-zinc-950/80"></div>
+        </div>
+    @endif
     <div>
         <div class="text-[clamp(3.5rem,14vmin,11rem)] font-light leading-none tabular-nums" x-text="fmt({ hour: 'numeric', minute: '2-digit' })"></div>
         <flux:heading size="xl" class="mt-2" x-text="fmt({ weekday: 'long', month: 'long', day: 'numeric' })"></flux:heading>
@@ -63,4 +70,10 @@
             @endif
         </div>
     </div>
+
+    @if ($background)
+        <div class="text-[0.75rem] text-zinc-400">
+            <span class="italic">{{ $background['title'] }}</span>, {{ $background['artist'] }} · {{ $background['credit'] }}
+        </div>
+    @endif
 </div>

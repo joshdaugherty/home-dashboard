@@ -59,7 +59,7 @@
     </main>
 
     {{-- Bottom tab bar: equal-width, 48px+ touch targets, never wraps. --}}
-    <nav class="flex shrink-0 border-t border-zinc-800 bg-zinc-900/90 pb-[env(safe-area-inset-bottom)]" aria-label="Dashboard sections">
+    <nav class="relative z-10 flex shrink-0 border-t border-zinc-800 bg-zinc-900/90 pb-[env(safe-area-inset-bottom)]" aria-label="Dashboard sections">
         @foreach ($tabs as $key => $tab)
             <button
                 type="button"
