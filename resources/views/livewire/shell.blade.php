@@ -30,7 +30,8 @@
             this.$watch('artOpen', open => { clearTimeout(this.artTimer); if (open) this.artTimer = setTimeout(() => this.artOpen = false, 30000); });
             this.$watch('ambient', on => { if (on) this.closeOverlays(); });
             // Switching tabs dismisses whatever lightbox is open.
-            this.$watch('tab', () => this.closeOverlays());
+            // and tells the tab it left to put its filters and selections back to the defaults.
+            this.$watch('tab', (now, from) => { this.closeOverlays(); window.dispatchEvent(new CustomEvent('tab-left', { detail: from })); });
             setInterval(() => {
                 this.now = new Date();
                 const idle = (Date.now() - this.last) / 1000;
@@ -73,6 +74,7 @@
     <main class="relative min-h-0 flex-1">
         @foreach ($tabs as $key => $tab)
             <section
+                data-tab="{{ $key }}"
                 x-show="tab === @js($key)"
                 x-cloak
                 class="absolute inset-0 overflow-y-auto overscroll-contain p-[clamp(0.75rem,2vmin,2rem)]"
@@ -146,7 +148,7 @@
     </main>
 
     {{-- Bottom tab bar: equal-width, 48px+ touch targets, never wraps. --}}
-    <nav class="relative z-10 flex shrink-0 border-t border-zinc-800 bg-zinc-900/90 pb-[env(safe-area-inset-bottom)]" aria-label="Dashboard sections">
+    <nav style="z-index: 45;" class="relative flex shrink-0 border-t border-zinc-800 bg-zinc-900/90 pb-[env(safe-area-inset-bottom)]" aria-label="Dashboard sections">
         @foreach ($tabs as $key => $tab)
             <button
                 type="button"

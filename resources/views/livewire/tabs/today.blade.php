@@ -22,7 +22,7 @@
     @endforeach
     {{-- 1 column when narrow, 2 when wide. --}}
     <div class="grid min-h-0 grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
-        <div class="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-4" @if ($background) style="background: rgba(24, 24, 27, 0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);" @endif>
+        <div class="relative flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900 p-4" @if ($background) style="background: rgba(24, 24, 27, 0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);" @endif>
             @if ($radarUrl && $forecast)
                 <button type="button" @click="$dispatch('open-radar', @js($radarUrl))" class="rounded-xl text-[0.85rem] text-zinc-300 active:bg-zinc-700" style="position: absolute; top: 0.75rem; right: 0.75rem; min-height: 2.75rem; padding: 0.5rem 1rem; background: rgba(63, 63, 70, 0.5);">Radar</button>
             @endif
@@ -32,9 +32,9 @@
                 <flux:text class="mt-1">Weather unavailable right now.</flux:text>
             @else
                 <div class="mt-2 flex items-center gap-4">
-                    <div class="text-[clamp(2.5rem,8vmin,5rem)] leading-none" aria-hidden="true">{{ $forecast['current']['icon'] }}</div>
+                    <div class="leading-none" style="font-size: clamp(3rem, 11vmin, 7rem);" aria-hidden="true">{{ $forecast['current']['icon'] }}</div>
                     <div>
-                        <div class="text-[clamp(2rem,6vmin,4rem)] font-light leading-none tabular-nums">{{ $forecast['current']['temp'] }}{{ $forecast['unit'] }}</div>
+                        <div class="font-light leading-none tabular-nums" style="font-size: clamp(2.5rem, 9vmin, 6rem);">{{ $forecast['current']['temp'] }}{{ $forecast['unit'] }}</div>
                         <flux:text class="mt-1">{{ $forecast['current']['label'] }} · feels {{ $forecast['current']['feels'] }}°</flux:text>
                         <flux:text class="mt-1 text-[0.85rem]">
                             @if (($forecast['current']['humidity'] ?? null) !== null)Humidity {{ ($forecast['current']['humidity'] ?? null) }}%@endif
@@ -43,14 +43,14 @@
                         </flux:text>
                     </div>
                 </div>
-                <div class="mt-4 grid grid-cols-5 gap-2 text-center">
+                <div class="mt-4 grid flex-1 grid-cols-5 gap-2 text-center">
                     @foreach ($forecast['daily'] as $day)
-                        <div class="rounded-xl bg-zinc-800/60 px-1 py-2">
-                            <div class="text-[0.8rem] text-zinc-400">{{ $day['name'] }}</div>
-                            <div class="text-[1.4rem] leading-tight" aria-hidden="true">{{ $day['icon'] }}</div>
-                            <div class="text-[0.85rem] tabular-nums">{{ $day['high'] }}° <span class="text-zinc-500">{{ $day['low'] }}°</span></div>
+                        <div class="flex flex-col items-center justify-center rounded-xl bg-zinc-800/60 px-1 py-2">
+                            <div class="text-zinc-400" style="font-size: clamp(0.85rem, 2vmin, 1.1rem);">{{ $day['name'] }}</div>
+                            <div class="leading-tight" style="font-size: clamp(1.75rem, 6vmin, 3.5rem);" aria-hidden="true">{{ $day['icon'] }}</div>
+                            <div class="tabular-nums" style="font-size: clamp(0.9rem, 2.4vmin, 1.3rem);">{{ $day['high'] }}° <span class="text-zinc-500">{{ $day['low'] }}°</span></div>
                             @if (! empty($day['precip']))
-                                <div class="text-[0.75rem] tabular-nums text-sky-300" title="Chance of rain">💧{{ $day['precip'] }}%</div>
+                                <div class="tabular-nums text-sky-300" style="font-size: clamp(0.8rem, 2vmin, 1rem);" title="Chance of rain">💧{{ $day['precip'] }}%</div>
                             @endif
                         </div>
                     @endforeach

@@ -332,6 +332,8 @@ class Groceries
             }
         }
 
+        usort($flexible, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
+
         return ['days' => array_values($days), 'flexible' => $flexible];
     }
 

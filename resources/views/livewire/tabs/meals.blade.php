@@ -1,5 +1,5 @@
 {{-- The week's meal plan from Notion. Tap a day or a meal for its ingredients (and to assign or clear it). --}}
-<div class="h-full" wire:poll.{{ $refresh }}s>
+<div class="h-full" wire:poll.{{ $refresh }}s @tab-left.window="if ($el.closest('[data-tab]')?.dataset.tab === $event.detail) { if ($wire.picking || $wire.viewing) $wire.close() }">
     @if (! $configured)
         <div class="flex h-full flex-col items-center justify-center gap-2 text-center">
             <flux:heading size="xl">Meals</flux:heading>
@@ -15,7 +15,7 @@
         @php($looking = $viewing ? collect($week['flexible'])->firstWhere('id', $viewing) : null)
         <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));">
             @foreach ($week['days'] as $day)
-                <button type="button" wire:key="day-{{ $day['date'] }}" wire:click="pick('{{ $day['date'] }}')" class="hd-card flex flex-col items-stretch justify-start rounded-2xl border bg-zinc-900 text-left active:bg-zinc-800 {{ $day['today'] ? 'border-white' : 'border-zinc-800' }}" style="min-height: 7rem;{{ $day['today'] ? ' box-shadow: inset 0 0 0 2px #fff;' : '' }}">
+                <button type="button" wire:key="day-{{ $day['date'] }}" wire:click="pick('{{ $day['date'] }}')" class="hd-card flex flex-col items-stretch justify-start rounded-2xl border bg-zinc-900 text-left active:bg-zinc-800 {{ $day['today'] ? 'border-white' : 'border-zinc-800' }}" style="min-height: 7rem;{{ $day['today'] ? ' outline: 3px solid #fff; outline-offset: -3px;' : '' }}">
                     <div class="hd-card-head"><flux:heading class="{{ $day['past'] ? 'opacity-60' : '' }}">{{ $day['label'] }}@if ($day['today']) <span class="text-zinc-400">· today</span>@endif</flux:heading></div>
                     <div class="p-4 pt-3">
                     @forelse ($day['meals'] as $meal)

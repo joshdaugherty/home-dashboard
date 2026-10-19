@@ -31,6 +31,14 @@ class Shopping extends Tab
         $this->editing = null;
     }
 
+    /** The tab was left: back to a clean box. */
+    public function leave(): void
+    {
+        $this->editing = null;
+        $this->query = '';
+        $this->notice = null;
+    }
+
     public function setQuantity(string $id, int $qty, Groceries $groceries): void
     {
         $groceries->setQuantity($id, $qty);
