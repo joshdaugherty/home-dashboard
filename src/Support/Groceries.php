@@ -365,53 +365,6 @@ class Groceries
         return array_map(fn ($i) => $start->addDays($i)->toDateString(), range(0, 6));
     }
 
-    /** Put the ingredients of the week's planned meals on the shopping list. Returns how many items were added. */
-    public function addWeekToList(): int
-    {
-        $start = $this->weekStart();
-        $plan = $this->plan($start);
-        $meals = $this->meals();
-        $items = $this->items();
-
-        if ($plan === null || $meals === null || $items === null) {
-            return 0;
-        }
-
-        $added = [];
-        $done = [];
-
-        foreach ($plan as $entry) {
-            $meal = $meals[$entry['meal']] ?? null;
-
-            if ($entry['added'] || ! $meal || ($entry['date'] === '' && $entry['done'])) {
-                continue;
-            }
-
-            foreach ($meal['ingredients'] as $id) {
-                if (isset($items[$id]) && ! $items[$id]['need'] && ! isset($added[$id])) {
-                    try {
-                        $this->notion->update($id, ['Need it' => ['checkbox' => true]]);
-                        $added[$id] = true;
-                    } catch (Throwable) {
-                        continue 2;
-                    }
-                }
-            }
-
-            try {
-                $this->notion->update($entry['id'], ['Added to list' => ['checkbox' => true]]);
-                $done[] = $entry['id'];
-            } catch (Throwable) {
-                // The ingredients are on the list; the plan entry is simply retried next time.
-            }
-        }
-
-        $this->patchItems(array_map(fn () => true, $added));
-        Cache::forget(self::PREFIX.$this->planKey($start));
-
-        return count($added);
-    }
-
     /** @return array<string, array{id: string, name: string, aisle: ?string, need: bool, note: string}>|null */
     private function items(): ?array
     {

@@ -1,5 +1,5 @@
 {{-- Items marked "Need it" in Notion, by store. Tap an item to take it off the list; type to add one. --}}
-<div class="h-full overflow-y-auto" wire:poll.{{ $refresh }}s>
+<div class="h-full" wire:poll.{{ $refresh }}s>
     @if (! $configured)
         <div class="flex h-full flex-col items-center justify-center gap-2 text-center">
             <flux:heading size="xl">Shopping</flux:heading>
