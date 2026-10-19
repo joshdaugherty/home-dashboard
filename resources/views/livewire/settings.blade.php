@@ -14,14 +14,17 @@
 
         <form wire:submit="save" class="space-y-10">
             {{-- People --}}
+            @if ($section === 'all' || $section === 'people')
             <section class="space-y-4">
                 <div>
+                    @unless ($embedded && $section !== 'all')
                     <flux:heading size="lg">People</flux:heading>
+                    @endunless
                     <flux:text class="mt-1">Events on a person's calendar show their picture. Pictures come from Gravatar using the email address; without one, their initial is shown. Only a hash of the address reaches the display.</flux:text>
                 </div>
 
                 @foreach ($people as $i => $person)
-                    <div class="flex flex-wrap items-end gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 p-4" wire:key="person-{{ $person['id'] }}">
+                    <div class="flex flex-wrap items-end gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 p-4" wire:key="person-{{ $i }}-{{ $person['id'] }}">
                         <div class="min-w-40 flex-1">
                             <flux:input wire:model="people.{{ $i }}.name" label="Name" />
                             @error("people.{$i}.name") <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
@@ -36,16 +39,20 @@
 
                 <flux:button type="button" wire:click="addPerson" class="min-h-12">Add a person</flux:button>
             </section>
+            @endif
 
             {{-- Calendars --}}
+            @if ($section === 'all' || $section === 'calendars')
             <section class="space-y-4">
                 <div>
+                    @unless ($embedded && $section !== 'all')
                     <flux:heading size="lg">Calendars</flux:heading>
+                    @endunless
                     <flux:text class="mt-1">Read-only iCal links, for example Google Calendar's "Secret address in iCal format". Saved addresses are never shown again; type a new one to replace it.</flux:text>
                 </div>
 
                 @forelse ($feeds as $i => $feed)
-                    <div class="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 p-4" wire:key="feed-{{ $feed['id'] }}">
+                    <div class="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 p-4" wire:key="feed-{{ $i }}-{{ $feed['id'] }}">
                         <div class="flex flex-wrap gap-3">
                             <div class="min-w-48 flex-1">
                                 <flux:input wire:model="feeds.{{ $i }}.name" label="Name" placeholder="Family" />
@@ -105,11 +112,15 @@
 
                 <flux:button type="button" wire:click="addFeed" class="min-h-12">Add a calendar</flux:button>
             </section>
+            @endif
 
             {{-- Location --}}
+            @if ($section === 'all' || $section === 'location')
             <section class="space-y-4">
                 <div>
+                    @unless ($embedded && $section !== 'all')
                     <flux:heading size="lg">Location and weather</flux:heading>
+                    @endunless
                     <flux:text class="mt-1">Used for the weather and for all times shown.</flux:text>
                 </div>
 
@@ -152,10 +163,13 @@
                     </div>
                 </div>
             </section>
+            @endif
 
             <div class="flex flex-wrap items-center gap-3">
                 <flux:button type="submit" variant="primary" class="min-h-12">Save</flux:button>
+                @if ($section === 'all' || $section === 'location')
                 <flux:button type="button" wire:click="resetToEnvironment" wire:confirm="Forget everything saved here and use the environment variables again?" class="min-h-12">Use environment defaults</flux:button>
+                @endif
             </div>
         </form>
     </div>

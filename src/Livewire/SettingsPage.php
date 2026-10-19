@@ -50,9 +50,13 @@ class SettingsPage extends Component
     /** True when rendered inside a host page (no kiosk chrome, no heading or back link). */
     public bool $embedded = false;
 
-    public function mount(bool $embedded = false): void
+    /** Which part of the settings to show: people, calendars, location, or all of them. */
+    public string $section = 'all';
+
+    public function mount(bool $embedded = false, string $section = 'all'): void
     {
         $this->embedded = $embedded;
+        $this->section = in_array($section, ['people', 'calendars', 'location'], true) ? $section : 'all';
         $this->load();
     }
 
@@ -179,46 +183,72 @@ class SettingsPage extends Component
 
     public function save(Settings $settings, CalendarFeeds $calendars): void
     {
-        $this->validate([
-            'feeds.*.name' => ['required', 'string', 'max:60'],
-            'feeds.*.color' => ['required', 'string', 'regex:/^(#[0-9a-fA-F]{3,8}|'.implode('|', array_keys(CalendarFeeds::PALETTE)).')$/'],
-            'people.*.name' => ['required', 'string', 'max:60'],
-            'people.*.email' => ['nullable', 'email', 'max:190'],
-            'feeds.*.person' => ['nullable', 'string'],
-            'feeds.*.url' => ['nullable', 'string', 'max:2000', 'regex:#^(https?|webcal)://[^\s]+$#i'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
-            'timezone' => ['required', Rule::in(DateTimeZone::listIdentifiers())],
-            'units' => ['required', Rule::in(['imperial', 'metric'])],
-        ], [
+        $rules = [
+            'people' => [
+                'people.*.name' => ['required', 'string', 'max:60'],
+                'people.*.email' => ['nullable', 'email', 'max:190'],
+            ],
+            'calendars' => [
+                'feeds.*.name' => ['required', 'string', 'max:60'],
+                'feeds.*.color' => ['required', 'string', 'regex:/^(#[0-9a-fA-F]{3,8}|'.implode('|', array_keys(CalendarFeeds::PALETTE)).')$/'],
+                'feeds.*.person' => ['nullable', 'string'],
+                'feeds.*.url' => ['nullable', 'string', 'max:2000', 'regex:#^(https?|webcal)://[^\s]+$#i'],
+            ],
+            'location' => [
+                'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+                'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+                'timezone' => ['required', Rule::in(DateTimeZone::listIdentifiers())],
+                'units' => ['required', Rule::in(['imperial', 'metric'])],
+            ],
+        ];
+
+        $parts = $this->section === 'all' ? array_keys($rules) : [$this->section];
+
+        $this->validate(array_merge(...array_map(fn (string $part) => $rules[$part], $parts)), [
             'feeds.*.url.regex' => 'Enter a full http(s) or webcal address.',
             'timezone.in' => 'Use a time zone name like America/Chicago.',
         ]);
+        if (in_array('calendars', $parts, true)) {
+            $existing = collect($calendars->feeds()['feeds'])->keyBy('id');
+            $ids = array_column($this->people, 'id');
+            $list = [];
 
-        $existing = collect($calendars->feeds()['feeds'])->keyBy('id');
-        $list = [];
+            foreach ($this->feeds as $i => $feed) {
+                $url = trim($feed['url']) !== '' ? trim($feed['url']) : ($existing[$feed['id']]['url'] ?? null);
 
-        foreach ($this->feeds as $i => $feed) {
-            $url = trim($feed['url']) !== '' ? trim($feed['url']) : ($existing[$feed['id']]['url'] ?? null);
+                if ($url === null) {
+                    $this->addError("feeds.{$i}.url", 'Add the calendar address.');
 
-            if ($url === null) {
-                $this->addError("feeds.{$i}.url", 'Add the calendar address.');
+                    return;
+                }
 
-                return;
+                $list[] = ['id' => $feed['id'], 'name' => trim($feed['name']), 'color' => $feed['color'], 'url' => $url, 'person' => in_array($feed['person'], $ids, true) ? $feed['person'] : null];
             }
 
-            $list[] = ['id' => $feed['id'], 'name' => trim($feed['name']), 'color' => $feed['color'], 'url' => $url, 'person' => in_array($feed['person'], array_column($this->people, 'id'), true) ? $feed['person'] : null];
+            $settings->set('calendars', $list);
         }
 
-        $settings->set('calendars', $list);
-        $settings->set('people', array_map(fn (array $p) => ['id' => $p['id'], 'name' => trim($p['name']), 'email' => strtolower(trim($p['email']))], $this->people));
-        $settings->set('timezone', $this->timezone);
-        $settings->set('units', $this->units);
+        if (in_array('people', $parts, true)) {
+            $settings->set('people', array_map(fn (array $p) => ['id' => $p['id'], 'name' => trim($p['name']), 'email' => strtolower(trim($p['email']))], $this->people));
 
-        foreach (['latitude' => $this->latitude, 'longitude' => $this->longitude] as $key => $value) {
-            $value === '' ? $settings->forget($key) : $settings->set($key, $value);
+            // Saving people alone must not leave calendars pointing at someone who was removed.
+            if (! in_array('calendars', $parts, true) && $settings->isSaved('calendars')) {
+                $ids = array_column($this->people, 'id');
+                $settings->set('calendars', array_map(
+                    fn (array $c) => ['person' => in_array($c['person'] ?? null, $ids, true) ? $c['person'] : null] + $c,
+                    $calendars->feeds()['feeds'],
+                ));
+            }
         }
 
+        if (in_array('location', $parts, true)) {
+            $settings->set('timezone', $this->timezone);
+            $settings->set('units', $this->units);
+
+            foreach (['latitude' => $this->latitude, 'longitude' => $this->longitude] as $key => $value) {
+                $value === '' ? $settings->forget($key) : $settings->set($key, $value);
+            }
+        }
         $this->tests = [];
         $this->load();
         $this->status = 'Saved.';

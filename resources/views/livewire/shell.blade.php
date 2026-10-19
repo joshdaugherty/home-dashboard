@@ -71,6 +71,13 @@
                 <span>{{ $tab['label'] }}</span>
             </button>
         @endforeach
+        <a
+            href="{{ route(config('home-dashboard.settings_route', 'home-dashboard.settings')) }}"
+            class="flex min-h-12 w-[clamp(4.5rem,9vw,7rem)] shrink-0 flex-col items-center justify-center gap-1 px-2 py-[clamp(0.4rem,1.2vh,0.9rem)] text-[0.8rem] font-medium text-zinc-400 active:bg-zinc-800/60"
+        >
+            <x-home-dashboard::icon name="cog" class="size-[1.75rem]" />
+            <span>Settings</span>
+        </a>
     </nav>
 
     {{-- Ambient mode: dim clock, drifting a few px each minute to avoid burn-in. Any touch wakes it. --}}

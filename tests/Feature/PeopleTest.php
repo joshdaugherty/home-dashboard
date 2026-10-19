@@ -113,4 +113,32 @@ class PeopleTest extends TestCase
         $this->assertStringContainsString(hash('sha256', 'josh@example.com'), $html);
         $this->assertStringNotContainsStringIgnoringCase('josh@example.com', $html);
     }
-}
+
+    public function test_a_section_only_shows_and_saves_its_own_part(): void
+    {
+        Livewire::test(SettingsPage::class, ['section' => 'people'])
+            ->assertSee('Add a person')
+            ->assertDontSee('Add a calendar')
+            ->assertDontSee('Find a place')
+            ->call('addPerson')
+            ->set('people.0.name', 'Josh')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('Josh', app(Settings::class)->get('people')[0]['name']);
+        $this->assertFalse(app(Settings::class)->isSaved('timezone'));
+    }
+
+    public function test_removing_a_person_in_the_people_section_unassigns_saved_calendars(): void
+    {
+        app(Settings::class)->set('people', [['id' => 'josh', 'name' => 'Josh', 'email' => '']]);
+        app(Settings::class)->set('calendars', [
+            ['id' => 'a', 'name' => 'Josh', 'color' => 'sky', 'url' => 'https://calendar.example.com/x/basic.ics', 'person' => 'josh'],
+        ]);
+
+        Livewire::test(SettingsPage::class, ['section' => 'people'])->call('removePerson', 0)->call('save');
+
+        $calendar = app(Settings::class)->get('calendars')[0];
+        $this->assertNull($calendar['person']);
+        $this->assertSame('https://calendar.example.com/x/basic.ics', $calendar['url']);
+    }}
