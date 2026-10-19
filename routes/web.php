@@ -9,6 +9,9 @@ Route::middleware('web')
     ->group(function () {
         Route::get('/manifest.webmanifest', ManifestController::class)
             ->name('home-dashboard.manifest');
+        Route::get('/manifest-icon-{size}.png', [ManifestController::class, 'icon'])
+            ->where('size', '192|512')
+            ->name('home-dashboard.manifest-icon');
     });
 
 Route::middleware(config('home-dashboard.route.middleware', ['web']))

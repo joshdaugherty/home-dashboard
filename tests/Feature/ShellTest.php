@@ -45,5 +45,11 @@ class ShellTest extends TestCase
         $this->assertSame('landscape', $manifest['orientation']);
         $this->assertSame('/', $manifest['start_url']);
         $this->assertSame('/', $manifest['scope']);
+        $this->assertSame('/manifest-icon-192.png', $manifest['icons'][0]['src']);
+        $this->assertSame('192x192', $manifest['icons'][0]['sizes']);
+
+        $this->get('/manifest-icon-192.png')
+            ->assertOk()
+            ->assertHeader('content-type', 'image/png');
     }
 }
