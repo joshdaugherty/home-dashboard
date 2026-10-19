@@ -54,6 +54,7 @@ return [
         'classes' => ['label' => 'Class Schedules', 'icon' => 'book', 'component' => 'home-dashboard.tabs.calendar', 'params' => ['only' => ['Class Schedule']]],
         'assignments' => ['label' => 'Assignments', 'icon' => 'check', 'component' => 'home-dashboard.tabs.calendar', 'params' => ['only' => ['Assignments']]],
         'shopping' => ['label' => 'Shopping', 'icon' => 'cart', 'component' => 'home-dashboard.tabs.shopping'],
+        'meals' => ['label' => 'Meals', 'icon' => 'meal', 'component' => 'home-dashboard.tabs.meals'],
     ],
 
     /*
@@ -85,6 +86,15 @@ return [
         'enabled' => (bool) env('DASHBOARD_BACKGROUND', true),
         // Optional: with a NASA key (https://api.nasa.gov) the Astronomy Picture of the Day takes every other hour.
         'nasa_key' => env('DASHBOARD_NASA_KEY'),
+    ],
+    // The shopping list and meal plan live in Notion. `token` is an internal integration secret (keep it in the environment);
+    // the others are the data source ids of the Aisles, Items, Meals and Meal Plan databases.
+    'notion' => [
+        'token' => env('NOTION_TOKEN'),
+        'aisles' => env('NOTION_AISLES'),
+        'items' => env('NOTION_ITEMS'),
+        'meals' => env('NOTION_MEALS'),
+        'plan' => env('NOTION_PLAN'),
     ],
     'cache' => [
         'weather' => 600,  // seconds

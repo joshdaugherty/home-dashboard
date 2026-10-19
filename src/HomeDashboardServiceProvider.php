@@ -35,6 +35,7 @@ class HomeDashboardServiceProvider extends ServiceProvider
         Livewire::component('home-dashboard.settings-form', SettingsPage::class);
         Livewire::component('home-dashboard.tabs.today', Tabs\Today::class);
         Livewire::component('home-dashboard.tabs.calendar', Tabs\Calendar::class);
+        Livewire::component('home-dashboard.tabs.meals', Tabs\Meals::class);
         Livewire::component('home-dashboard.tabs.chores', Tabs\Chores::class);
         Livewire::component('home-dashboard.tabs.shopping', Tabs\Shopping::class);
         Livewire::component('home-dashboard.tabs.photos', Tabs\Photos::class);

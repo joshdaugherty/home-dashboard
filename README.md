@@ -14,7 +14,8 @@ Requires PHP 8.3+, Laravel 13, Livewire 4.1+ and Flux 2.13+ (free components onl
 | Calendar | Month grid plus a per-day agenda for every calendar that is not a class schedule or assignments, with an Everyone / Shared / per-person filter |
 | Class Schedules | The same calendar view, limited to the Class Schedule category |
 | Assignments | The same calendar view, limited to the Assignments category |
-| Shopping | Placeholder |
+| Shopping | The shopping list from Notion, grouped by store aisle in walking order; tap an item to take it off the list |
+| Meals | This week's meal plan from Notion; tap a meal for its ingredients, or add them all to the shopping list |
 | Settings | A link (not a pane) to the settings pages |
 
 The tab list is config (`tabs`): reorder, remove, or point a tab at your own Livewire component. A tab's `params` are passed to its component; the calendar panes use `only` and `except` to filter by category.
@@ -103,6 +104,31 @@ Recurring, all-day and multi-day events are expanded with [sabre/vobject](https:
 - **Categories** (`categories` in the config) group calendars. The first is the default for a new calendar. Today's "Up next" lists only `today_categories` (Personal by default), so class schedules do not crowd it.
 - **Filters.** Each calendar tab offers Everyone, Shared (calendars with nobody assigned) and one button per person, but only for choices that actually have a calendar on that tab. A tab with a single choice shows no filter bar.
 
+## Shopping list and meals (Notion)
+
+The Shopping and Meals tabs read and write four Notion databases, so Notion stays the single source of truth and the family can edit from any device:
+
+| Database | Columns |
+| --- | --- |
+| **Aisles** | Name, Store (Kroger / Costco), Order (walking order; Costco can be its own aisle), Description |
+| **Items** | Name, Aisle (relation), Need it (checkbox: ticked means it is on the list), Note (for example "need 1") |
+| **Meals** | Name, Ingredients (relation to Items), Recipe link, Notes |
+| **Meal Plan** | Name, Date, Meal (relation), Added to list (checkbox) |
+
+Create an internal integration at <https://www.notion.so/profile/integrations> with read, update and insert content, share the page holding the four databases with it, and configure:
+
+```
+NOTION_TOKEN=ntn_...        # the integration secret; server-side only, never in the repo
+NOTION_AISLES=...           # data source ids (database settings, or the collection:// url)
+NOTION_ITEMS=...
+NOTION_MEALS=...
+NOTION_PLAN=...
+```
+
+- **Shopping** lists every Item with Need it ticked under its Aisle, sorted by Order. Tapping an item unticks it in Notion. Items without an aisle appear under "Unsorted".
+- **Meals** shows the next seven days of the plan. "Add ingredients to the list" ticks Need it on every ingredient of the planned meals that is not already on the list and sets Added to list on those plan rows, so pressing it twice does nothing the second time.
+- Data is cached for a minute (items) to five minutes (aisles, meals, plan), and a failed refresh serves the last good copy. Changes made in Notion appear within about that time plus the pane's refresh. The token never reaches the browser, and only ids that came from the Items database can be ticked.
+
 ## Background pictures
 
 The Today tab shows a new picture every hour under a dark wash, with translucent cards so a little of it shows through. On the idle screen the same picture appears dimmed behind the clock, with its title and credit in a corner box. The ⓘ button on Today opens a lightbox with the title, artist, date, a short description when there is one, and the credit.
@@ -119,7 +145,7 @@ A kiosk never refreshes on its own, so the shell asks an authenticated `/version
 
 ## Configuration
 
-`config/home-dashboard.php` (publish it with `php artisan vendor:publish --tag=home-dashboard-config`) covers the route and middleware, `settings_route`, idle and ambient timers, location and data sources, calendar `categories` and `today_categories`, the `background` options, cache lifetimes, the tab list, the Vite entry points and the user env mapping. The views can be published with `--tag=home-dashboard-views`.
+`config/home-dashboard.php` (publish it with `php artisan vendor:publish --tag=home-dashboard-config`) covers the route and middleware, `settings_route`, idle and ambient timers, location and data sources, calendar `categories` and `today_categories`, the `background` options, cache lifetimes, the `notion` token and database ids, the tab list, the Vite entry points and the user env mapping. The views can be published with `--tag=home-dashboard-views`.
 
 If you publish the config, remember Laravel merges package config one level deep: overriding an array such as `route`, `tabs` or `background` replaces all of it, so include every key you need.
 
