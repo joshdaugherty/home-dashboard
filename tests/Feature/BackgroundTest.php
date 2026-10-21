@@ -43,6 +43,22 @@ class BackgroundTest extends TestCase
         $this->assertStringContainsString('Art Institute of Chicago', $art['credit']);
     }
 
+    public function test_it_does_not_come_back_to_a_picture_it_showed_lately(): void
+    {
+        $this->fakeMuseum(array_map(fn ($id) => $this->work($id, 4000, 2500), range(1, 6)));
+
+        $titles = [];
+
+        foreach (range(0, 5) as $hour) {
+            $titles[] = app(Background::class)->current(CarbonImmutable::parse('2026-10-19 09:00')->addDays($hour))['title'];
+        }
+
+        $this->assertCount(6, array_unique($titles), 'six different days, six different pictures from six candidates');
+
+        // Everything has been seen: one repeats rather than nothing showing.
+        $this->assertNotNull(app(Background::class)->current(CarbonImmutable::parse('2026-10-26 09:00')));
+    }
+
     public function test_the_search_is_an_allow_list_that_excludes_sensitive_subjects(): void
     {
         $this->fakeMuseum([$this->work(1, 4000, 2500)]);

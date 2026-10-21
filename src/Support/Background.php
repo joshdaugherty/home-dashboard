@@ -22,6 +22,11 @@ class Background
 
     private const PAGE = 10;
 
+    /** Where the pictures shown lately are remembered, and how many. */
+    private const SEEN = 'home-dashboard:background:v3:seen';
+
+    private const REMEMBER = 60;
+
     private const BLOCKED = 'nude nudity naked nudes bather bathers bathing bath bathe venus diana odalisque erotic sensual death dead dying violence wounded war battle crucifixion skull massacre execution martyrdom hell women woman girl girls figure figures men man boy children child portrait mythology bacchus nymph nymphs sleeping';
 
     public function enabled(): bool
@@ -154,11 +159,12 @@ class Background
             return null;
         }
 
-        // The same page for everyone on the same day; walk forward until a landscape-shaped image turns up.
+        // Gather landscape-shaped works from a few pages, starting from a page picked by the date and hour.
         $pages = max(1, (int) floor(min($total, 1000) / self::PAGE));
         $start = crc32($date) % $pages;
+        $works = [];
 
-        for ($i = 0; $i < min($pages, 5); $i++) {
+        for ($i = 0; $i < min($pages, 3); $i++) {
             $page = ($start + $i) % $pages + 1;
 
             foreach ($this->search(self::PAGE, $page)['data'] ?? [] as $work) {
@@ -169,21 +175,44 @@ class Background
                     continue;
                 }
 
-                return [
-                    // 1686 is one of the sizes the museum's image server recommends.
-                    'url' => 'https://www.artic.edu/iiif/2/'.$work['image_id'].'/full/1686,/0/default.jpg',
-                    'title' => (string) $work['title'],
-                    'artist' => trim(strtok((string) ($work['artist_display'] ?? ''), "\n")) ?: 'Unknown artist',
-                    'date' => (string) ($work['date_display'] ?? ''),
-                    'about' => self::tidy($work['short_description'] ?? ''),
-                    'credit' => 'Art Institute of Chicago, public domain',
-                    // The museum publishes its descriptions under CC BY 4.0, which asks for a credit.
-                    'note' => ! empty($work['short_description']) ? 'Description: Art Institute of Chicago, CC BY 4.0' : '',
-                ];
+                $works[] = $work;
             }
         }
 
-        return null;
+        if ($works === []) {
+            return null;
+        }
+
+        // Start somewhere other than the top of the list, and skip pictures shown lately so a come-around is new.
+        // Only when everything gathered has been seen does one repeat.
+        $seen = (array) Cache::get(self::SEEN, []);
+        $offset = crc32($date) % count($works);
+        $work = null;
+
+        for ($n = 0; $n < count($works); $n++) {
+            $candidate = $works[($offset + $n) % count($works)];
+
+            if (! in_array($candidate['image_id'], $seen, true)) {
+                $work = $candidate;
+                break;
+            }
+        }
+
+        $work ??= $works[$offset];
+
+        Cache::put(self::SEEN, array_slice([...array_diff($seen, [$work['image_id']]), $work['image_id']], -self::REMEMBER), now()->addDays(60));
+
+        return [
+            // 1686 is one of the sizes the museum's image server recommends.
+            'url' => 'https://www.artic.edu/iiif/2/'.$work['image_id'].'/full/1686,/0/default.jpg',
+            'title' => (string) $work['title'],
+            'artist' => trim(strtok((string) ($work['artist_display'] ?? ''), "\n")) ?: 'Unknown artist',
+            'date' => (string) ($work['date_display'] ?? ''),
+            'about' => self::tidy($work['short_description'] ?? ''),
+            'credit' => 'Art Institute of Chicago, public domain',
+            // The museum publishes its descriptions under CC BY 4.0, which asks for a credit.
+            'note' => ! empty($work['short_description']) ? 'Description: Art Institute of Chicago, CC BY 4.0' : '',
+        ];
     }
 
     /** @return array<string, mixed> */
